@@ -1050,11 +1050,13 @@ void UI::handleDonutInput(bool& running) {
 
         if (button < 0) continue;
 
-        // Setup repeat for directional buttons
+        // Setup repeat for directional and shoulder buttons
         if (button == SDL_CONTROLLER_BUTTON_DPAD_UP ||
             button == SDL_CONTROLLER_BUTTON_DPAD_DOWN ||
             button == SDL_CONTROLLER_BUTTON_DPAD_LEFT ||
-            button == SDL_CONTROLLER_BUTTON_DPAD_RIGHT) {
+            button == SDL_CONTROLLER_BUTTON_DPAD_RIGHT ||
+            button == SDL_CONTROLLER_BUTTON_LEFTSHOULDER ||
+            button == SDL_CONTROLLER_BUTTON_RIGHTSHOULDER) {
             repeatDir_ = button;
             repeatStart_ = SDL_GetTicks();
             repeatLast_ = repeatStart_;
