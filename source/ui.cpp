@@ -977,7 +977,7 @@ void UI::drawDonutStatusBar() {
             msg = "DPad U/D:Select  A:Confirm  B:Cancel";
             break;
         case UIState::Import:
-            msg = "DPad U/D:Select  A:Import  B:Cancel";
+            msg = "DPad U/D:Select  A:Import  X:Delete  B:Cancel";
             break;
         case UIState::ExitMenu:
             msg = "DPad U/D:Select  A:Confirm  B:Cancel";
@@ -1047,10 +1047,11 @@ void UI::drawListPanel() {
             std::snprintf(fbuf, sizeof(fbuf), "%d", d.flavorCount());
             drawText(fbuf, LIST_X + 370, ry + 6, COL_ACCENT, fontSmall_);
         } else {
+            SDL_Color emptyCol = selected ? COL_TEXT_DIM : COL_EMPTY;
             char ibuf[8];
             std::snprintf(ibuf, sizeof(ibuf), "%3d", idx + 1);
-            drawText(ibuf, LIST_X + 18, ry + 6, COL_EMPTY, fontSmall_);
-            drawText("(empty)", LIST_X + 83, ry + 6, COL_EMPTY, fontSmall_);
+            drawText(ibuf, LIST_X + 18, ry + 6, emptyCol, fontSmall_);
+            drawText("(empty)", LIST_X + 83, ry + 6, emptyCol, fontSmall_);
         }
     }
 
@@ -1933,6 +1934,26 @@ void UI::handleImportInput(int button) {
             }
             state_ = UIState::List;
             break;
+
+        case SDL_CONTROLLER_BUTTON_Y: { // Switch X = delete file
+            if (importCursor_ >= 0 && importCursor_ < fileCount) {
+                std::string display = importFiles_[importCursor_];
+                if (display.size() > 6)
+                    display = display.substr(0, display.size() - 6);
+                if (showConfirm("Delete File?", "This will permanently delete:", display)) {
+                    std::string path = basePath_ + "donuts/" + importFiles_[importCursor_];
+                    std::remove(path.c_str());
+                    scanDonutFiles();
+                    if (importFiles_.empty()) {
+                        showMessageAndWait("No Files", "No .donut files found in donuts/ folder.");
+                        state_ = UIState::List;
+                    } else if (importCursor_ >= static_cast<int>(importFiles_.size())) {
+                        importCursor_ = static_cast<int>(importFiles_.size()) - 1;
+                    }
+                }
+            }
+            break;
+        }
 
         case SDL_CONTROLLER_BUTTON_A: // Switch B = cancel
             state_ = UIState::List;
