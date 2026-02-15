@@ -688,3 +688,18 @@ void DonutInfo::cloneToAll(uint8_t* blockData, int sourceIndex) {
 void DonutInfo::deleteAll(uint8_t* blockData) {
     std::memset(blockData, 0, Donut9a::MAX_COUNT * Donut9a::SIZE);
 }
+
+void DonutInfo::calcFlavorProfile(const Donut9a& d, int flavors[5]) {
+    flavors[0] = flavors[1] = flavors[2] = flavors[3] = flavors[4] = 0;
+    for (int i = 0; i < 8; i++) {
+        uint16_t item = d.berry(i);
+        int idx = findBerryByItem(item);
+        if (idx < 0) continue;
+        const auto& b = BERRIES[idx];
+        flavors[0] += b.spicy;
+        flavors[1] += b.fresh;
+        flavors[2] += b.sweet;
+        flavors[3] += b.bitter;
+        flavors[4] += b.sour;
+    }
+}

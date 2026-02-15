@@ -747,6 +747,115 @@ void UI::drawStatusBar(const std::string& msg) {
     drawText(msg, 15, SCREEN_H - 30, COL_STATUS, fontSmall_);
 }
 
+// --- Flavor Radar Chart ---
+
+void UI::drawFlavorRadar(int cx, int cy, int radius, const int flavors[5]) {
+    // Display order (clockwise from top):
+    // 0=Spicy(top), 1=Sour(top-right), 2=Fresh(bot-right), 3=Bitter(bot-left), 4=Sweet(top-left)
+    // Maps from calc order: [0]=Spicy, [1]=Fresh, [2]=Sweet, [3]=Bitter, [4]=Sour
+    const int display[5] = { flavors[0], flavors[4], flavors[1], flavors[3], flavors[2] };
+    static const char* LABELS[5] = { "Spicy", "Sour", "Fresh", "Bitter", "Sweet" };
+    static const SDL_Color LABEL_COLORS[5] = {
+        {255, 100, 100, 255},  // Spicy - red
+        {255, 180, 80, 255},   // Sour - orange
+        {100, 220, 130, 255},  // Fresh - green
+        {100, 150, 255, 255},  // Bitter - blue
+        {255, 130, 200, 255},  // Sweet - magenta
+    };
+
+    constexpr double PI = 3.14159265358979;
+    constexpr double ANGLE_STEP = 2.0 * PI / 5.0;
+    constexpr int MAX_STAT = 760;
+
+    // Precompute pentagon vertex positions (unit circle)
+    double vx[5], vy[5];
+    for (int i = 0; i < 5; i++) {
+        double angle = (-PI / 2.0) + i * ANGLE_STEP;
+        vx[i] = std::cos(angle);
+        vy[i] = std::sin(angle);
+    }
+
+    // Draw reference pentagon outline
+    SDL_SetRenderDrawColor(renderer_, COL_EDIT_FIELD.r, COL_EDIT_FIELD.g, COL_EDIT_FIELD.b, 255);
+    for (int i = 0; i < 5; i++) {
+        int j = (i + 1) % 5;
+        SDL_RenderDrawLine(renderer_,
+            cx + (int)(vx[i] * radius), cy + (int)(vy[i] * radius),
+            cx + (int)(vx[j] * radius), cy + (int)(vy[j] * radius));
+        // Spokes
+        SDL_RenderDrawLine(renderer_, cx, cy,
+            cx + (int)(vx[i] * radius), cy + (int)(vy[i] * radius));
+    }
+
+    // Compute scaled stat points using PKHeX per-vertex scaling
+    int sx[5], sy[5];
+    for (int i = 0; i < 5; i++) {
+        int stat = display[i];
+        int statMax;
+        if (stat <= 350)
+            statMax = stat + 200;
+        else if (stat <= 700)
+            statMax = ((stat + 99) / 100) * 100;
+        else
+            statMax = MAX_STAT;
+
+        float scale = (statMax > 0) ? static_cast<float>(stat) / statMax : 0.0f;
+        if (scale > 1.0f) scale = 1.0f;
+        if (scale == 0.0f) scale = 0.10f; // baseline
+
+        sx[i] = cx + (int)(vx[i] * radius * scale);
+        sy[i] = cy + (int)(vy[i] * radius * scale);
+    }
+
+    // Fill stat polygon using scanline (counter-clockwise order: 0,4,3,2,1)
+    int ordered[5] = { 0, 4, 3, 2, 1 };
+    int polyX[5], polyY[5];
+    for (int i = 0; i < 5; i++) {
+        polyX[i] = sx[ordered[i]];
+        polyY[i] = sy[ordered[i]];
+    }
+
+    // Scanline fill for convex polygon
+    int minY = polyY[0], maxY = polyY[0];
+    for (int i = 1; i < 5; i++) {
+        if (polyY[i] < minY) minY = polyY[i];
+        if (polyY[i] > maxY) maxY = polyY[i];
+    }
+
+    SDL_SetRenderDrawBlendMode(renderer_, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(renderer_, 255, 255, 0, 160); // semi-transparent yellow
+    for (int y = minY; y <= maxY; y++) {
+        int xMin = 9999, xMax = -9999;
+        for (int i = 0; i < 5; i++) {
+            int j = (i + 1) % 5;
+            int y0 = polyY[i], y1 = polyY[j];
+            int x0 = polyX[i], x1 = polyX[j];
+            if ((y0 <= y && y1 > y) || (y1 <= y && y0 > y)) {
+                int ix = x0 + (y - y0) * (x1 - x0) / (y1 - y0);
+                if (ix < xMin) xMin = ix;
+                if (ix > xMax) xMax = ix;
+            }
+        }
+        if (xMin <= xMax)
+            SDL_RenderDrawLine(renderer_, xMin, y, xMax, y);
+    }
+
+    // Draw stat polygon outline
+    SDL_SetRenderDrawColor(renderer_, 255, 255, 0, 255);
+    for (int i = 0; i < 5; i++) {
+        int j = (i + 1) % 5;
+        SDL_RenderDrawLine(renderer_, polyX[i], polyY[i], polyX[j], polyY[j]);
+    }
+
+    // Draw labels and values
+    for (int i = 0; i < 5; i++) {
+        int lx = cx + (int)(vx[i] * (radius + 18));
+        int ly = cy + (int)(vy[i] * (radius + 18));
+        drawTextCentered(LABELS[i], lx, ly - 8, LABEL_COLORS[i], fontSmall_);
+        drawTextCentered(std::to_string(display[i]), lx, ly + 8, COL_TEXT, fontSmall_);
+    }
+}
+
 // --- Donut Editor: Header ---
 
 void UI::drawDonutHeader() {
@@ -942,6 +1051,13 @@ void UI::drawDetailPanel() {
             drawText(buf, px + 20, y, COL_TEXT_DIM, fontSmall_);
         }
     }
+
+    // Flavor radar chart (right side of detail panel)
+    int flavorVals[5];
+    DonutInfo::calcFlavorProfile(d, flavorVals);
+    int radarCX = px + pw - 160;
+    int radarCY = CONTENT_Y + CONTENT_H / 2 + 40;
+    drawFlavorRadar(radarCX, radarCY, 80, flavorVals);
 }
 
 // --- Donut Editor: Edit Panel ---

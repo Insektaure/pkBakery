@@ -142,6 +142,9 @@ private:
     void drawText(const std::string& text, int x, int y, SDL_Color c, TTF_Font* f = nullptr);
     void drawTextRight(const std::string& text, int x, int y, SDL_Color c, TTF_Font* f = nullptr);
 
+    // Flavor radar chart
+    void drawFlavorRadar(int cx, int cy, int radius, const int flavors[5]);
+
     // Donut editor views
     void drawDonutHeader();
     void drawDonutStatusBar();
