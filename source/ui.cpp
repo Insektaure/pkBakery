@@ -302,9 +302,6 @@ void UI::drawCurrentFrame() {
             drawText("No donut data found in save file.", DETAIL_X + 20, SCREEN_H / 2, COL_TEXT, font_);
             drawText("Make sure you have a Pokemon Legends Z-A save.", DETAIL_X + 20, SCREEN_H / 2 + 30, COL_TEXT_DIM, fontSmall_);
         }
-        if (state_ == UIState::Batch) drawBatchMenu();
-        if (state_ == UIState::Import) drawImportPanel();
-        if (state_ == UIState::ExitMenu) drawExitMenu();
         drawDonutStatusBar();
     }
 }
@@ -642,15 +639,15 @@ std::string UI::buildBackupDir() const {
 // --- About Popup ---
 
 void UI::drawAboutPopup() {
-    drawRect(0, 0, SCREEN_W, SCREEN_H, {0, 0, 0, 187});
+    drawRect(0, 0, SCREEN_W, SCREEN_H, {0, 0, 0, 140});
 
     constexpr int POP_W = 700;
     constexpr int POP_H = 300;
     int px = (SCREEN_W - POP_W) / 2;
     int py = (SCREEN_H - POP_H) / 2;
 
-    drawRect(px, py, POP_W, POP_H, COL_PANEL);
-    drawRectOutline(px, py, POP_W, POP_H, COL_EDIT_FIELD, 2);
+    drawRect(px, py, POP_W, POP_H, COL_BATCH_BG);
+    drawRectOutline(px, py, POP_W, POP_H, COL_CURSOR, 2);
 
     int cx = px + POP_W / 2;
     int y = py + 25;
