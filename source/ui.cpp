@@ -156,9 +156,10 @@ void UI::showSplash() {
 
 // --- Message / Working ---
 
-void UI::showMessageAndWait(const std::string& title, const std::string& body) {
+void UI::showMessageAndWait(const std::string& title, const std::string& body, const std::string& body2) {
     if (!renderer_) return;
 
+    bool hasBody2 = !body2.empty();
     bool waiting = true;
     while (waiting) {
         SDL_Event event;
@@ -178,26 +179,32 @@ void UI::showMessageAndWait(const std::string& title, const std::string& body) {
         drawCurrentFrame();
 
         constexpr int POP_W = 480;
-        constexpr int POP_H = 180;
+        int popH = hasBody2 ? 200 : 180;
         int px = (SCREEN_W - POP_W) / 2;
-        int py = (SCREEN_H - POP_H) / 2;
+        int py = (SCREEN_H - popH) / 2;
 
         drawRect(0, 0, SCREEN_W, SCREEN_H, {0, 0, 0, 140});
-        drawRect(px, py, POP_W, POP_H, COL_BATCH_BG);
-        drawRectOutline(px, py, POP_W, POP_H, COL_CURSOR, 2);
+        drawRect(px, py, POP_W, popH, COL_BATCH_BG);
+        drawRectOutline(px, py, POP_W, popH, COL_CURSOR, 2);
 
         drawTextCentered(title, SCREEN_W / 2, py + 35, COL_CURSOR, fontLarge_);
-        drawTextCentered(body, SCREEN_W / 2, py + 85, COL_TEXT, font_);
-        drawTextCentered("Press B to dismiss", SCREEN_W / 2, py + POP_H - 30, COL_TEXT_DIM, fontSmall_);
+        if (hasBody2) {
+            drawTextCentered(body, SCREEN_W / 2, py + 75, COL_TEXT, font_);
+            drawTextCentered(body2, SCREEN_W / 2, py + 100, COL_EDIT_VAL, font_);
+        } else {
+            drawTextCentered(body, SCREEN_W / 2, py + 85, COL_TEXT, font_);
+        }
+        drawTextCentered("Press B to dismiss", SCREEN_W / 2, py + popH - 30, COL_TEXT_DIM, fontSmall_);
 
         SDL_RenderPresent(renderer_);
         SDL_Delay(16);
     }
 }
 
-bool UI::showConfirm(const std::string& title, const std::string& body) {
+bool UI::showConfirm(const std::string& title, const std::string& body, const std::string& body2) {
     if (!renderer_) return false;
 
+    bool hasBody2 = !body2.empty();
     while (true) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
@@ -220,17 +227,22 @@ bool UI::showConfirm(const std::string& title, const std::string& body) {
         drawCurrentFrame();
 
         constexpr int POP_W = 480;
-        constexpr int POP_H = 180;
+        int popH = hasBody2 ? 200 : 180;
         int px = (SCREEN_W - POP_W) / 2;
-        int py = (SCREEN_H - POP_H) / 2;
+        int py = (SCREEN_H - popH) / 2;
 
         drawRect(0, 0, SCREEN_W, SCREEN_H, {0, 0, 0, 140});
-        drawRect(px, py, POP_W, POP_H, COL_BATCH_BG);
-        drawRectOutline(px, py, POP_W, POP_H, COL_CURSOR, 2);
+        drawRect(px, py, POP_W, popH, COL_BATCH_BG);
+        drawRectOutline(px, py, POP_W, popH, COL_CURSOR, 2);
 
         drawTextCentered(title, SCREEN_W / 2, py + 35, COL_CURSOR, fontLarge_);
-        drawTextCentered(body, SCREEN_W / 2, py + 85, COL_TEXT, font_);
-        drawTextCentered("A: Confirm    B: Cancel", SCREEN_W / 2, py + POP_H - 30, COL_TEXT_DIM, fontSmall_);
+        if (hasBody2) {
+            drawTextCentered(body, SCREEN_W / 2, py + 75, COL_TEXT, font_);
+            drawTextCentered(body2, SCREEN_W / 2, py + 100, COL_EDIT_VAL, font_);
+        } else {
+            drawTextCentered(body, SCREEN_W / 2, py + 85, COL_TEXT, font_);
+        }
+        drawTextCentered("A: Confirm    B: Cancel", SCREEN_W / 2, py + popH - 30, COL_TEXT_DIM, fontSmall_);
 
         SDL_RenderPresent(renderer_);
         SDL_Delay(16);
@@ -1556,11 +1568,11 @@ void UI::handleBatchInput(int button) {
 
     switch (button) {
         case SDL_CONTROLLER_BUTTON_DPAD_UP:
-            if (batchCursor_ > 0) batchCursor_--;
+            batchCursor_ = (batchCursor_ + opCount - 1) % opCount;
             break;
 
         case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
-            if (batchCursor_ < opCount - 1) batchCursor_++;
+            batchCursor_ = (batchCursor_ + 1) % opCount;
             break;
 
         case SDL_CONTROLLER_BUTTON_B: { // Switch A = confirm
@@ -1677,8 +1689,8 @@ std::string UI::sanitizeFilename(const std::string& input) {
     if (start == std::string::npos) return "donut";
     size_t end = out.find_last_not_of(' ');
     out = out.substr(start, end - start + 1);
-    // Limit length
-    if (out.size() > 200) out.resize(200);
+    // Limit length (40 chars max to fit popup display)
+    if (out.size() > 40) out.resize(40);
     if (out.empty()) out = "donut";
     return out;
 }
@@ -1705,7 +1717,7 @@ std::string UI::showKeyboard(const std::string& defaultText) {
     swkbdConfigMakePresetDefault(&kbd);
     swkbdConfigSetHeaderText(&kbd, "Enter filename");
     swkbdConfigSetInitialText(&kbd, defaultText.c_str());
-    swkbdConfigSetStringLenMax(&kbd, 200);
+    swkbdConfigSetStringLenMax(&kbd, 40);
 
     char result[256] = {};
     Result rc = swkbdShow(&kbd, result, sizeof(result));
@@ -1744,7 +1756,7 @@ bool UI::exportDonut(int index) {
     FILE* check = fopen(path.c_str(), "rb");
     if (check) {
         fclose(check);
-        if (!showConfirm("Overwrite?", "File already exists: " + filename + ".donut"))
+        if (!showConfirm("Overwrite?", "File already exists:", filename))
             return false;
     }
 
@@ -1762,7 +1774,7 @@ bool UI::exportDonut(int index) {
         return false;
     }
 
-    showMessageAndWait("Exported", "Saved as: " + filename + ".donut");
+    showMessageAndWait("Exported", "Saved as:", filename);
     return true;
 }
 
@@ -1967,11 +1979,11 @@ void UI::handleExitMenuInput(int button, bool& running) {
 
     switch (button) {
         case SDL_CONTROLLER_BUTTON_DPAD_UP:
-            if (exitCursor_ > 0) exitCursor_--;
+            exitCursor_ = (exitCursor_ + opCount - 1) % opCount;
             break;
 
         case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
-            if (exitCursor_ < opCount - 1) exitCursor_++;
+            exitCursor_ = (exitCursor_ + 1) % opCount;
             break;
 
         case SDL_CONTROLLER_BUTTON_B: { // Switch A = confirm

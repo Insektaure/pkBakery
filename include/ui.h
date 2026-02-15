@@ -34,8 +34,8 @@ public:
     bool init();
     void shutdown();
     void showSplash();
-    void showMessageAndWait(const std::string& title, const std::string& body);
-    bool showConfirm(const std::string& title, const std::string& body);
+    void showMessageAndWait(const std::string& title, const std::string& body, const std::string& body2 = "");
+    bool showConfirm(const std::string& title, const std::string& body, const std::string& body2 = "");
     void showWorking(const std::string& msg);
     void run(const std::string& basePath, const std::string& savePath);
 
