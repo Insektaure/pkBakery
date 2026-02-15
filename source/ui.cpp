@@ -767,24 +767,35 @@ void UI::drawFlavorRadar(int cx, int cy, int radius, const int flavors[5]) {
     constexpr double ANGLE_STEP = 2.0 * PI / 5.0;
     constexpr int MAX_STAT = 760;
 
+    // Draw colored background image (flavorprofile.png is 628x541)
+    auto it = spriteCache_.find("flavorprofile");
+    if (it == spriteCache_.end()) {
+#ifdef __SWITCH__
+        SDL_Surface* surf = IMG_Load("romfs:/sprites/flavorprofile.png");
+#else
+        SDL_Surface* surf = IMG_Load("romfs/sprites/flavorprofile.png");
+#endif
+        SDL_Texture* tex = surf ? SDL_CreateTextureFromSurface(renderer_, surf) : nullptr;
+        if (surf) SDL_FreeSurface(surf);
+        spriteCache_["flavorprofile"] = tex;
+        it = spriteCache_.find("flavorprofile");
+    }
+    if (it->second) {
+        // PKHeX renders the 628x541 image in a 276x240 control with pentagon radius 55.
+        // In the original image, the dark pentagon has radius ~125px (55 * 628/276).
+        // Scale so the dark pentagon matches our 'radius' parameter.
+        int imgW = radius * 628 / 125;
+        int imgH = radius * 541 / 125;
+        SDL_Rect dst = {cx - imgW / 2, cy - imgH / 2, imgW, imgH};
+        SDL_RenderCopy(renderer_, it->second, nullptr, &dst);
+    }
+
     // Precompute pentagon vertex positions (unit circle)
     double vx[5], vy[5];
     for (int i = 0; i < 5; i++) {
         double angle = (-PI / 2.0) + i * ANGLE_STEP;
         vx[i] = std::cos(angle);
         vy[i] = std::sin(angle);
-    }
-
-    // Draw reference pentagon outline
-    SDL_SetRenderDrawColor(renderer_, COL_EDIT_FIELD.r, COL_EDIT_FIELD.g, COL_EDIT_FIELD.b, 255);
-    for (int i = 0; i < 5; i++) {
-        int j = (i + 1) % 5;
-        SDL_RenderDrawLine(renderer_,
-            cx + (int)(vx[i] * radius), cy + (int)(vy[i] * radius),
-            cx + (int)(vx[j] * radius), cy + (int)(vy[j] * radius));
-        // Spokes
-        SDL_RenderDrawLine(renderer_, cx, cy,
-            cx + (int)(vx[i] * radius), cy + (int)(vy[i] * radius));
     }
 
     // Compute scaled stat points using PKHeX per-vertex scaling
@@ -1055,9 +1066,9 @@ void UI::drawDetailPanel() {
     // Flavor radar chart (right side of detail panel)
     int flavorVals[5];
     DonutInfo::calcFlavorProfile(d, flavorVals);
-    int radarCX = px + pw - 160;
-    int radarCY = CONTENT_Y + CONTENT_H / 2 + 40;
-    drawFlavorRadar(radarCX, radarCY, 80, flavorVals);
+    int radarCX = px + pw - 190;
+    int radarCY = CONTENT_Y + CONTENT_H / 2 + 30;
+    drawFlavorRadar(radarCX, radarCY, 70, flavorVals);
 }
 
 // --- Donut Editor: Edit Panel ---
