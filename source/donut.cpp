@@ -639,24 +639,31 @@ void DonutInfo::fillOneShinyRandom(Donut9a& d) {
         d.setFlavor(2, FLAVORS[catchLv3[nextRand() % catchCount]].hash);
 }
 
-static bool isSparkling(int flavorIdx) {
-    const char* n = DonutInfo::FLAVORS[flavorIdx].name;
-    return n[0] == 'S' && n[1] == 'p' && n[2] == 'a' && n[3] == 'r';
+// Compare flavor category (prefix before ": " or " (")
+static bool sameCategory(int idxA, int idxB) {
+    const char* a = DonutInfo::FLAVORS[idxA].name;
+    const char* b = DonutInfo::FLAVORS[idxB].name;
+    int lenA = 0;
+    while (a[lenA] && !(a[lenA] == ':' && a[lenA+1] == ' ') && !(a[lenA] == ' ' && a[lenA+1] == '(')) lenA++;
+    int lenB = 0;
+    while (b[lenB] && !(b[lenB] == ':' && b[lenB+1] == ' ') && !(b[lenB] == ' ' && b[lenB+1] == '(')) lenB++;
+    if (lenA != lenB) return false;
+    for (int i = 0; i < lenA; i++) if (a[i] != b[i]) return false;
+    return true;
 }
 
-// Pick 3 distinct Lv3 flavors with at most 1 Sparkling Power
+// Pick 3 distinct Lv3 flavors, each from a different category
 static void pickRandomLv3Flavors(const int* lv3Indices, int lv3Count, uint64_t out[3]) {
-    bool hasSparkling = false;
     int picks[3] = {-1, -1, -1};
     for (int p = 0; p < 3; p++) {
         for (;;) {
             int idx = lv3Indices[nextRand() % lv3Count];
-            bool dup = false;
-            for (int q = 0; q < p; q++) if (picks[q] == idx) { dup = true; break; }
-            if (dup) continue;
-            if (isSparkling(idx) && hasSparkling) continue;
+            bool conflict = false;
+            for (int q = 0; q < p; q++) {
+                if (picks[q] == idx || sameCategory(picks[q], idx)) { conflict = true; break; }
+            }
+            if (conflict) continue;
             picks[p] = idx;
-            if (isSparkling(idx)) hasSparkling = true;
             break;
         }
     }
