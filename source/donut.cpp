@@ -457,33 +457,33 @@ const char* DonutInfo::getBerryName(uint16_t item) {
         case 151:  return "Pecha Berry";
         case 152:  return "Rawst Berry";
         case 153:  return "Aspear Berry";
-        case 155:  return "Leppa Berry";
-        case 156:  return "Oran Berry";
-        case 157:  return "Persim Berry";
-        case 158:  return "Lum Berry";
+        case 155:  return "Oran Berry";
+        case 156:  return "Persim Berry";
+        case 157:  return "Lum Berry";
+        case 158:  return "Sitrus Berry";
         case 169:  return "Pomeg Berry";
         case 170:  return "Kelpsy Berry";
         case 171:  return "Qualot Berry";
         case 172:  return "Hondew Berry";
         case 173:  return "Grepa Berry";
         case 174:  return "Tamato Berry";
-        case 184:  return "Figy Berry";
-        case 185:  return "Wiki Berry";
-        case 186:  return "Mago Berry";
-        case 187:  return "Aguav Berry";
-        case 188:  return "Iapapa Berry";
-        case 189:  return "Razz Berry";
-        case 190:  return "Bluk Berry";
-        case 191:  return "Nanab Berry";
-        case 192:  return "Wepear Berry";
-        case 193:  return "Pinap Berry";
-        case 194:  return "Sitrus Berry";
-        case 195:  return "Spelon Berry";
-        case 196:  return "Pamtre Berry";
-        case 197:  return "Watmel Berry";
-        case 198:  return "Durin Berry";
-        case 199:  return "Belue Berry";
-        case 200:  return "Liechi Berry";
+        case 184:  return "Occa Berry";
+        case 185:  return "Passho Berry";
+        case 186:  return "Wacan Berry";
+        case 187:  return "Rindo Berry";
+        case 188:  return "Yache Berry";
+        case 189:  return "Chople Berry";
+        case 190:  return "Kebia Berry";
+        case 191:  return "Shuca Berry";
+        case 192:  return "Coba Berry";
+        case 193:  return "Payapa Berry";
+        case 194:  return "Tanga Berry";
+        case 195:  return "Charti Berry";
+        case 196:  return "Kasib Berry";
+        case 197:  return "Haban Berry";
+        case 198:  return "Colbur Berry";
+        case 199:  return "Babiri Berry";
+        case 200:  return "Chilan Berry";
         case 686:  return "Roseli Berry";
         // Z-A berries (item IDs 2651-2683, names from text_Items_en.txt index N = display line N+1)
         case 2651: return "Hyper Cheri Berry";
@@ -708,30 +708,24 @@ void DonutInfo::calcFlavorProfile(const Donut9a& d, int flavors[5]) {
 }
 
 void DonutInfo::recalcStats(Donut9a& d) {
-    int regBoost = 0, zaBoost = 0;
-    int regCal = 0, zaCal = 0;
+    int sumBoost = 0;
+    int sumCal = 0;
     int flavorScore = 0;
-    bool hasRegular = false;
     for (int i = 0; i < 8; i++) {
         uint16_t item = d.berry(i);
         int idx = findBerryByItem(item);
         if (idx < 0) continue;
         const auto& b = BERRIES[idx];
+        sumBoost += b.boost;
+        sumCal += b.calories;
         flavorScore += b.flavorScore();
-        // Z-A Hyper berries (2651-2683) have a 1.5x multiplier on boost/calories
-        if (item >= 2651 && item <= 2683) {
-            zaBoost += b.boost;
-            zaCal += b.calories;
-        } else {
-            regBoost += b.boost;
-            regCal += b.calories;
-            hasRegular = true;
-        }
     }
-    int totalCal = regCal + zaCal * 3 / 2;
-    int totalBoost = regBoost + zaBoost * 3 / 2;
-    if (hasRegular) totalBoost += 1; // +1 base for regular berries (PKHeX formula)
+    uint8_t stars = calcStarRating(flavorScore);
+    // Star rating multiplier: (10 + stars) / 10 applied via integer division
+    int mult = 10 + stars;
+    int totalBoost = sumBoost * mult / 10;
+    int totalCal = sumCal * mult / 10;
     d.setCalories(static_cast<uint16_t>(totalCal > 9999 ? 9999 : totalCal));
     d.setLevelBoost(static_cast<uint8_t>(totalBoost));
-    d.setStars(calcStarRating(flavorScore));
+    d.setStars(stars);
 }
