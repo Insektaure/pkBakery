@@ -22,6 +22,7 @@ enum class EditField {
 };
 
 enum class BatchOp {
+    OneShiny, OneShinyRandom, OneRandomLv3,
     FillShiny, FillRandomLv3, CloneToAll, DeleteSelected,
     DeleteAll, Compress, ExportDonut, ImportDonut, Cancel,
     COUNT

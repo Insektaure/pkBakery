@@ -88,6 +88,9 @@ namespace DonutInfo {
     uint8_t calcStarRating(int flavorScore);
     int findValidBerryIndex(uint16_t item);
 
+    void fillOneShiny(Donut9a& d);
+    void fillOneShinyRandom(Donut9a& d);
+    void fillOneRandomLv3(Donut9a& d);
     void fillAllShiny(uint8_t* blockData);
     void fillAllRandomLv3(uint8_t* blockData);
     void compress(uint8_t* blockData);

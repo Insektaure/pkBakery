@@ -587,6 +587,77 @@ static void getLv3FlavorIndices(int* out, int& count) {
     }
 }
 
+void DonutInfo::fillOneShiny(Donut9a& d) {
+    std::memcpy(d.data, SHINY_TEMPLATE, Donut9a::SIZE);
+    d.applyTimestamp();
+    recalcStats(d);
+    d.setFlavor(0, 0xD373B22CEF7A33C9ULL); // Sparkling Power: All Types (Lv. 3)
+    d.setFlavor(1, 0xCCFCB99681D31E8BULL); // Alpha Power (Lv. 3)
+    d.setFlavor(2, 0);
+}
+
+void DonutInfo::fillOneShinyRandom(Donut9a& d) {
+    seedRand();
+    std::memcpy(d.data, SHINY_TEMPLATE, Donut9a::SIZE);
+    d.applyTimestamp();
+    recalcStats(d);
+
+    int sparkLv3[32]; int sparkCount = 0;
+    for (int i = 1; i < FLAVOR_COUNT; i++) {
+        const char* n = FLAVORS[i].name;
+        if (n[0] == 'S' && n[1] == 'p' && n[2] == 'a' && n[3] == 'r') {
+            int len = 0; while (n[len]) len++;
+            if (len >= 7 && n[len-2] == '3')
+                sparkLv3[sparkCount++] = i;
+        }
+    }
+
+    int humungoIdx = findFlavorByHash(0xCF24AEDFA2D0FCAB);
+    int teensyIdx  = findFlavorByHash(0xADCF1EA0D67FA02E);
+    int alphaIdx   = findFlavorByHash(0xCCFCB99681D31E8B);
+
+    int catchLv3[32]; int catchCount = 0;
+    for (int i = 1; i < FLAVOR_COUNT; i++) {
+        const char* n = FLAVORS[i].name;
+        if (n[0] == 'C' && n[1] == 'a' && n[2] == 't' && n[3] == 'c') {
+            int len = 0; while (n[len]) len++;
+            if (len >= 7 && n[len-2] == '3')
+                catchLv3[catchCount++] = i;
+        }
+    }
+
+    if (sparkCount > 0)
+        d.setFlavor(0, FLAVORS[sparkLv3[nextRand() % sparkCount]].hash);
+    int roll = nextRand() % 3;
+    if (roll == 0 && humungoIdx >= 0)
+        d.setFlavor(1, FLAVORS[humungoIdx].hash);
+    else if (roll == 1 && teensyIdx >= 0)
+        d.setFlavor(1, FLAVORS[teensyIdx].hash);
+    else if (alphaIdx >= 0)
+        d.setFlavor(1, FLAVORS[alphaIdx].hash);
+    if (catchCount > 0)
+        d.setFlavor(2, FLAVORS[catchLv3[nextRand() % catchCount]].hash);
+}
+
+void DonutInfo::fillOneRandomLv3(Donut9a& d) {
+    seedRand();
+    int lv3Indices[512]; int lv3Count = 0;
+    getLv3FlavorIndices(lv3Indices, lv3Count);
+    if (lv3Count < 3) return;
+
+    std::memcpy(d.data, SHINY_TEMPLATE, Donut9a::SIZE);
+    recalcStats(d);
+
+    int a = nextRand() % lv3Count;
+    int b = (a + 1 + nextRand() % (lv3Count - 1)) % lv3Count;
+    int c = (b + 1 + nextRand() % (lv3Count - 2)) % lv3Count;
+    d.setFlavor(0, FLAVORS[lv3Indices[a]].hash);
+    d.setFlavor(1, FLAVORS[lv3Indices[b]].hash);
+    d.setFlavor(2, FLAVORS[lv3Indices[c]].hash);
+
+    d.applyTimestamp();
+}
+
 void DonutInfo::fillAllShiny(uint8_t* blockData) {
     seedRand();
     // Collect Sparkling Power lv3 indices for flavor0

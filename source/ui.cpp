@@ -1109,7 +1109,7 @@ void UI::drawDetailPanel() {
     y += 28;
 
     drawText("Berry Name:", px + 20, y, COL_TEXT_DIM, font_);
-    std::snprintf(buf, sizeof(buf), "%s (%d)", DonutInfo::getBerryName(d.berryName()), d.berryName());
+    std::snprintf(buf, sizeof(buf), "%s", DonutInfo::getBerryName(d.berryName()));
     drawText(buf, px + 150, y, COL_TEXT, font_);
     y += 34;
 
@@ -1240,6 +1240,9 @@ void UI::drawEditPanel() {
 // --- Donut Editor: Batch Menu ---
 
 static const char* BATCH_LABELS[] = {
+    "Set: Shiny Power",
+    "Set: Shiny Power (Random)",
+    "Set: Random Lv3",
     "Fill All: Shiny Power",
     "Fill All: Random Lv3",
     "Clone Selected to All",
@@ -1254,7 +1257,7 @@ static const char* BATCH_LABELS[] = {
 void UI::drawBatchMenu() {
     drawRect(0, 0, SCREEN_W, SCREEN_H, {0, 0, 0, 140});
 
-    int mw = 380, mh = 370;
+    int mw = 380, mh = 462;
     int mx = (SCREEN_W - mw) / 2;
     int my = (SCREEN_H - mh) / 2;
 
@@ -1581,6 +1584,21 @@ void UI::handleBatchInput(int button) {
             uint8_t* bd = save_.donutBlockData();
             if (bd) {
                 switch (op) {
+                    case BatchOp::OneShiny: {
+                        Donut9a d = save_.getDonut(listCursor_);
+                        if (d.data) DonutInfo::fillOneShiny(d);
+                        break;
+                    }
+                    case BatchOp::OneShinyRandom: {
+                        Donut9a d = save_.getDonut(listCursor_);
+                        if (d.data) DonutInfo::fillOneShinyRandom(d);
+                        break;
+                    }
+                    case BatchOp::OneRandomLv3: {
+                        Donut9a d = save_.getDonut(listCursor_);
+                        if (d.data) DonutInfo::fillOneRandomLv3(d);
+                        break;
+                    }
                     case BatchOp::FillShiny:
                         DonutInfo::fillAllShiny(bd);
                         break;

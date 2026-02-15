@@ -48,6 +48,9 @@ All derived stats (Stars, Calories, Level Boost, Berry Name, Sprite) are enforce
   - Delete `.donut` files directly from the import file picker (X button)
 
 ### Batch Operations
+- **Set: Shiny Power** — Fill the current slot with a 5-star shiny donut (Sparkling Power: All Types Lv. 3 + Alpha Power Lv. 3)
+- **Set: Shiny Power (Random)** — Fill the current slot with a 5-star shiny donut with randomized Sparkling Power, size effects, and Catch Power flavors
+- **Set: Random Lv3** — Fill the current slot with 3 distinct random level-3 flavors
 - **Fill All: Shiny Power** — Fill all 999 slots with 5-star shiny donuts with randomized Sparkling Power, size effects, and Catch Power flavors
 - **Fill All: Random Lv3** — Fill all 999 slots with 3 distinct random level-3 flavors each
 - **Clone Selected to All** — Copy the current donut to all 999 slots with unique timestamps
