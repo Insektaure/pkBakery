@@ -639,6 +639,31 @@ void DonutInfo::fillOneShinyRandom(Donut9a& d) {
         d.setFlavor(2, FLAVORS[catchLv3[nextRand() % catchCount]].hash);
 }
 
+static bool isSparkling(int flavorIdx) {
+    const char* n = DonutInfo::FLAVORS[flavorIdx].name;
+    return n[0] == 'S' && n[1] == 'p' && n[2] == 'a' && n[3] == 'r';
+}
+
+// Pick 3 distinct Lv3 flavors with at most 1 Sparkling Power
+static void pickRandomLv3Flavors(const int* lv3Indices, int lv3Count, uint64_t out[3]) {
+    bool hasSparkling = false;
+    int picks[3] = {-1, -1, -1};
+    for (int p = 0; p < 3; p++) {
+        for (;;) {
+            int idx = lv3Indices[nextRand() % lv3Count];
+            bool dup = false;
+            for (int q = 0; q < p; q++) if (picks[q] == idx) { dup = true; break; }
+            if (dup) continue;
+            if (isSparkling(idx) && hasSparkling) continue;
+            picks[p] = idx;
+            if (isSparkling(idx)) hasSparkling = true;
+            break;
+        }
+    }
+    for (int i = 0; i < 3; i++)
+        out[i] = DonutInfo::FLAVORS[picks[i]].hash;
+}
+
 void DonutInfo::fillOneRandomLv3(Donut9a& d) {
     seedRand();
     int lv3Indices[512]; int lv3Count = 0;
@@ -651,12 +676,11 @@ void DonutInfo::fillOneRandomLv3(Donut9a& d) {
         d.setBerry(i, VALID_BERRY_IDS[1 + nextRand() % (VALID_BERRY_COUNT - 1)]);
     recalcStats(d);
 
-    int a = nextRand() % lv3Count;
-    int b = (a + 1 + nextRand() % (lv3Count - 1)) % lv3Count;
-    int c = (b + 1 + nextRand() % (lv3Count - 2)) % lv3Count;
-    d.setFlavor(0, FLAVORS[lv3Indices[a]].hash);
-    d.setFlavor(1, FLAVORS[lv3Indices[b]].hash);
-    d.setFlavor(2, FLAVORS[lv3Indices[c]].hash);
+    uint64_t flavors[3];
+    pickRandomLv3Flavors(lv3Indices, lv3Count, flavors);
+    d.setFlavor(0, flavors[0]);
+    d.setFlavor(1, flavors[1]);
+    d.setFlavor(2, flavors[2]);
 
     d.applyTimestamp();
 }
@@ -737,13 +761,11 @@ void DonutInfo::fillAllRandomLv3(uint8_t* blockData) {
         for (int j = 0; j < Donut9a::MAX_BERRIES; j++)
             d.setBerry(j, VALID_BERRY_IDS[1 + nextRand() % (VALID_BERRY_COUNT - 1)]);
         recalcStats(d);
-        // Pick 3 distinct random lv3 flavors
-        int a = nextRand() % lv3Count;
-        int b = (a + 1 + nextRand() % (lv3Count - 1)) % lv3Count;
-        int c = (b + 1 + nextRand() % (lv3Count - 2)) % lv3Count;
-        d.setFlavor(0, FLAVORS[lv3Indices[a]].hash);
-        d.setFlavor(1, FLAVORS[lv3Indices[b]].hash);
-        d.setFlavor(2, FLAVORS[lv3Indices[c]].hash);
+        uint64_t flavors[3];
+        pickRandomLv3Flavors(lv3Indices, lv3Count, flavors);
+        d.setFlavor(0, flavors[0]);
+        d.setFlavor(1, flavors[1]);
+        d.setFlavor(2, flavors[2]);
         d.applyTimestamp(i);
     }
 }
