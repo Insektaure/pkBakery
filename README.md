@@ -172,6 +172,19 @@ make clean
 
 Produces `pkBakery.nro`. Place in `sdmc:/switch/pkBakery/` on your SD card.
 
+## Screenshots
+
+<div align="center">
+  <img src="screenshots/001.jpg">
+  <img src="screenshots/002.jpg">
+  <img src="screenshots/003.jpg">
+  <img src="screenshots/004.jpg">
+  <img src="screenshots/005.jpg">
+  <img src="screenshots/006.jpg">
+  <img src="screenshots/007.jpg">
+  <img src="screenshots/008.jpg">
+</div>  
+
 ## Credits
 
 - [PKHeX](https://github.com/kwsch/PKHeX) by kwsch — PokeCrypto research, SCBlock/SwishCrypto and donut structure reference
