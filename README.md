@@ -2,6 +2,10 @@
 
 A Nintendo Switch homebrew application for editing donuts in Pokemon Legends: Z-A save files.
 
+## Compatibility
+
+- Legends Z-A version **2.0.1 only** !
+
 ## Features
 
 ### Save File Handling
