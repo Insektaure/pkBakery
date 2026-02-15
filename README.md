@@ -2,6 +2,19 @@
 
 A Nintendo Switch homebrew application for editing donuts in Pokemon Legends: Z-A save files.
 
+## Disclaimer
+
+This software is provided "as-is" without any warranty.\
+While the app has been tested, it may contain bugs that could corrupt or damage your save files.
+
+**Use at your own risk.**
+
+The author is not responsible for any data loss or damage to your save data.
+
+**This is why the automatic backup system exists** — always verify your backups before making changes.
+
+If you need to restore a backup, use a save manager such as [Checkpoint](https://github.com/FlagBrew/Checkpoint) or [JKSV](https://github.com/J-D-K/JKSV) to import the backup files back onto your Switch.
+
 ## Compatibility
 
 - Legends Z-A version **2.0.1 only** !
