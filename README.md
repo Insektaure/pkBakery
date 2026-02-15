@@ -45,6 +45,7 @@ All derived stats (Stars, Calories, Level Boost, Berry Name, Sprite) are enforce
   - Scrollable file picker with alphabetical sorting
   - Validates berry IDs, flavor hashes, and star rating before importing
   - Applies a fresh timestamp and recalculates stats after import
+  - Delete `.donut` files directly from the import file picker (X button)
 
 ### Batch Operations
 - **Fill All: Shiny Power** — Fill all 999 slots with 5-star shiny donuts with randomized Sparkling Power, size effects, and Catch Power flavors
@@ -57,7 +58,7 @@ All derived stats (Stars, Calories, Level Boost, Berry Name, Sprite) are enforce
 - **Import Donut from File** — Import a donut from file
 
 ### Flavor Radar Chart
-The detail panel displays a radar chart showing the donut's flavor profile (Spicy, Fresh, Sweet, Bitter, Sour) with per-vertex scaling matching PKHeX's rendering.
+The detail panel displays a radar chart showing the donut's flavor profile (Spicy, Fresh, Sweet, Bitter, Sour) with per-vertex scaling matching game's rendering.
 
 ## Controls
 
@@ -92,12 +93,21 @@ The detail panel displays a radar chart showing the donut's flavor profile (Spic
 | L1 / R1 | Adjust value +/-10 |
 | A or B | Return to list |
 
-### Batch Menu / Import / Exit Menu
+### Batch Menu / Exit Menu
 
 | Button | Action |
 |--------|--------|
 | D-Pad U/D | Select option |
 | A | Confirm |
+| B | Cancel |
+
+### Import File Picker
+
+| Button | Action |
+|--------|--------|
+| D-Pad U/D | Select file |
+| A | Import selected file |
+| X | Delete selected file |
 | B | Cancel |
 
 ### Exit Menu Options
@@ -133,7 +143,11 @@ Requires [devkitPro](https://devkitpro.org/) with libnx, SDL2, SDL2_ttf, SDL2_im
 
 ```
 export DEVKITPRO=/opt/devkitpro
-make
+make all
+```
+
+```bash
+make clean
 ```
 
 Produces `pkBakery.nro`. Place in `sdmc:/switch/pkBakery/` on your SD card.
