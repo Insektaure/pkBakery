@@ -1129,8 +1129,7 @@ void UI::drawEditPanel() {
             case EditField::Berry7: case EditField::Berry8: {
                 int bi = f - static_cast<int>(EditField::Berry1);
                 uint16_t bv = d.berry(bi);
-                std::snprintf(buf, sizeof(buf), "%s (%d)", DonutInfo::getBerryName(bv), bv);
-                val = buf;
+                val = DonutInfo::getBerryName(bv);
                 break;
             }
             case EditField::Flavor0: case EditField::Flavor1:
@@ -1381,6 +1380,9 @@ void UI::handleListInput(int button, bool& running) {
                 std::memcpy(d.data, DonutInfo::SHINY_TEMPLATE, Donut9a::SIZE);
                 d.applyTimestamp();
                 DonutInfo::recalcStats(d);
+                d.setFlavor(0, 0xD373B22CEF7A33C9ULL); // Sparkling Power: All Types (Lv. 3)
+                d.setFlavor(1, 0xCCFCB99681D31E8BULL); // Alpha Power (Lv. 3)
+                d.setFlavor(2, 0);
             }
             editField_ = 0;
             state_ = UIState::Edit;
