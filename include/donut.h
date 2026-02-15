@@ -99,4 +99,7 @@ namespace DonutInfo {
     // Flavor profile: sums berry contributions into flavors[5]
     // Order: [0]=Spicy, [1]=Fresh, [2]=Sweet, [3]=Bitter, [4]=Sour
     void calcFlavorProfile(const Donut9a& d, int flavors[5]);
+
+    // Recalculate Stars, Calories, LevelBoost from berries
+    void recalcStats(Donut9a& d);
 }

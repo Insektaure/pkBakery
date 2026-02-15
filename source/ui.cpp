@@ -1074,7 +1074,7 @@ void UI::drawDetailPanel() {
 // --- Donut Editor: Edit Panel ---
 
 static const char* EDIT_LABELS[] = {
-    "Stars", "Level Boost", "Calories", "Sprite ID", "Berry Name",
+    "Sprite ID", "Berry Name",
     "Berry 1", "Berry 2", "Berry 3", "Berry 4",
     "Berry 5", "Berry 6", "Berry 7", "Berry 8",
     "Flavor 1", "Flavor 2", "Flavor 3",
@@ -1101,7 +1101,13 @@ void UI::drawEditPanel() {
 
     std::snprintf(buf, sizeof(buf), "Editing Donut #%d", listCursor_ + 1);
     drawText(buf, px + 20, y, COL_CURSOR, fontLarge_);
-    y += 40;
+    y += 32;
+
+    // Auto-calculated stats (read-only)
+    std::snprintf(buf, sizeof(buf), "%s  Cal:%d  Boost:+%d",
+                  DonutInfo::starsString(d.stars()).c_str(), d.calories(), d.levelBoost());
+    drawText(buf, px + 20, y, COL_TEXT_DIM, fontSmall_);
+    y += 24;
 
     int fieldCount = static_cast<int>(EditField::COUNT);
     for (int f = 0; f < fieldCount; f++) {
@@ -1118,15 +1124,6 @@ void UI::drawEditPanel() {
 
         std::string val;
         switch (static_cast<EditField>(f)) {
-            case EditField::Stars:
-                val = DonutInfo::starsString(d.stars()) + " (" + std::to_string(d.stars()) + ")";
-                break;
-            case EditField::LevelBoost:
-                val = "+" + std::to_string(d.levelBoost());
-                break;
-            case EditField::Calories:
-                val = std::to_string(d.calories());
-                break;
             case EditField::DonutSprite:
                 val = std::to_string(d.donutSprite());
                 break;
@@ -1391,6 +1388,7 @@ void UI::handleListInput(int button, bool& running) {
             if (d.data && d.isEmpty()) {
                 std::memcpy(d.data, DonutInfo::SHINY_TEMPLATE, Donut9a::SIZE);
                 d.applyTimestamp();
+                DonutInfo::recalcStats(d);
             }
             editField_ = 0;
             state_ = UIState::Edit;
@@ -1526,27 +1524,6 @@ void UI::adjustFieldValue(int direction) {
 
     auto field = static_cast<EditField>(editField_);
     switch (field) {
-        case EditField::Stars: {
-            int v = d.stars() + direction;
-            if (v < 0) v = 5;
-            if (v > 5) v = 0;
-            d.setStars(static_cast<uint8_t>(v));
-            break;
-        }
-        case EditField::LevelBoost: {
-            int v = d.levelBoost() + direction;
-            if (v < 0) v = 0;
-            if (v > 255) v = 255;
-            d.setLevelBoost(static_cast<uint8_t>(v));
-            break;
-        }
-        case EditField::Calories: {
-            int v = d.calories() + direction;
-            if (v < 0) v = 0;
-            if (v > 9999) v = 9999;
-            d.setCalories(static_cast<uint16_t>(v));
-            break;
-        }
         case EditField::DonutSprite: {
             int v = d.donutSprite() + direction;
             if (v < 0) v = 202;
@@ -1566,6 +1543,8 @@ void UI::adjustFieldValue(int direction) {
             int bi = editField_ - static_cast<int>(EditField::Berry1);
             int idx = cycleBerry(d.berry(bi), direction);
             d.setBerry(bi, DonutInfo::VALID_BERRY_IDS[idx]);
+            // Auto-recalculate derived stats from berries
+            DonutInfo::recalcStats(d);
             break;
         }
         case EditField::Flavor0: case EditField::Flavor1:

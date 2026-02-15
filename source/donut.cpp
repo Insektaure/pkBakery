@@ -607,6 +607,8 @@ void DonutInfo::fillAllShiny(uint8_t* blockData) {
 
         Donut9a d{entry};
 
+        recalcStats(d);
+
         // Randomize flavors like PKHeX's ApplyShinySizeCatch
         if (sparkCount > 0)
             d.setFlavor(0, FLAVORS[sparkLv3[nextRand() % sparkCount]].hash);
@@ -638,6 +640,7 @@ void DonutInfo::fillAllRandomLv3(uint8_t* blockData) {
         std::memcpy(entry, SHINY_TEMPLATE, Donut9a::SIZE);
 
         Donut9a d{entry};
+        recalcStats(d);
         // Pick 3 distinct random lv3 flavors
         int a = nextRand() % lv3Count;
         int b = (a + 1 + nextRand() % (lv3Count - 1)) % lv3Count;
@@ -702,4 +705,33 @@ void DonutInfo::calcFlavorProfile(const Donut9a& d, int flavors[5]) {
         flavors[3] += b.bitter;
         flavors[4] += b.sour;
     }
+}
+
+void DonutInfo::recalcStats(Donut9a& d) {
+    int regBoost = 0, zaBoost = 0;
+    int regCal = 0, zaCal = 0;
+    int flavorScore = 0;
+    bool hasRegular = false;
+    for (int i = 0; i < 8; i++) {
+        uint16_t item = d.berry(i);
+        int idx = findBerryByItem(item);
+        if (idx < 0) continue;
+        const auto& b = BERRIES[idx];
+        flavorScore += b.flavorScore();
+        // Z-A Hyper berries (2651-2683) have a 1.5x multiplier on boost/calories
+        if (item >= 2651 && item <= 2683) {
+            zaBoost += b.boost;
+            zaCal += b.calories;
+        } else {
+            regBoost += b.boost;
+            regCal += b.calories;
+            hasRegular = true;
+        }
+    }
+    int totalCal = regCal + zaCal * 3 / 2;
+    int totalBoost = regBoost + zaBoost * 3 / 2;
+    if (hasRegular) totalBoost += 1; // +1 base for regular berries (PKHeX formula)
+    d.setCalories(static_cast<uint16_t>(totalCal > 9999 ? 9999 : totalCal));
+    d.setLevelBoost(static_cast<uint8_t>(totalBoost));
+    d.setStars(calcStarRating(flavorScore));
 }
