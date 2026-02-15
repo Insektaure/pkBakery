@@ -645,7 +645,10 @@ void DonutInfo::fillOneRandomLv3(Donut9a& d) {
     getLv3FlavorIndices(lv3Indices, lv3Count);
     if (lv3Count < 3) return;
 
-    std::memcpy(d.data, SHINY_TEMPLATE, Donut9a::SIZE);
+    d.clear();
+    // Randomize 8 berries (skip index 0 = none)
+    for (int i = 0; i < Donut9a::MAX_BERRIES; i++)
+        d.setBerry(i, VALID_BERRY_IDS[1 + nextRand() % (VALID_BERRY_COUNT - 1)]);
     recalcStats(d);
 
     int a = nextRand() % lv3Count;
@@ -727,9 +730,12 @@ void DonutInfo::fillAllRandomLv3(uint8_t* blockData) {
 
     for (int i = 0; i < Donut9a::MAX_COUNT; i++) {
         uint8_t* entry = blockData + i * Donut9a::SIZE;
-        std::memcpy(entry, SHINY_TEMPLATE, Donut9a::SIZE);
+        std::memset(entry, 0, Donut9a::SIZE);
 
         Donut9a d{entry};
+        // Randomize 8 berries (skip index 0 = none)
+        for (int j = 0; j < Donut9a::MAX_BERRIES; j++)
+            d.setBerry(j, VALID_BERRY_IDS[1 + nextRand() % (VALID_BERRY_COUNT - 1)]);
         recalcStats(d);
         // Pick 3 distinct random lv3 flavors
         int a = nextRand() % lv3Count;
