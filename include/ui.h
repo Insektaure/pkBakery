@@ -6,6 +6,7 @@
 #include <SDL2/SDL_ttf.h>
 #include <SDL2/SDL_image.h>
 #include <string>
+#include <unordered_map>
 
 // App-level screen state
 enum class AppScreen { ProfileSelector, MainView };
@@ -127,6 +128,11 @@ private:
 
     // About popup
     void drawAboutPopup();
+
+    // Sprite cache
+    std::unordered_map<std::string, SDL_Texture*> spriteCache_;
+    SDL_Texture* getDonutSprite(uint16_t spriteId, uint8_t stars);
+    void freeSprites();
 
     // Rendering helpers
     void drawTextCentered(const std::string& text, int cx, int cy, SDL_Color color, TTF_Font* f);

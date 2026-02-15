@@ -84,6 +84,7 @@ bool UI::init() {
 }
 
 void UI::shutdown() {
+    freeSprites();
     account_.freeTextures();
     if (fontLarge_) TTF_CloseFont(fontLarge_);
     if (fontSmall_) TTF_CloseFont(fontSmall_);
@@ -638,6 +639,62 @@ void UI::drawAboutPopup() {
     drawTextCentered("Press - or B to close", cx, y, COL_TEXT_DIM, fontSmall_);
 }
 
+// --- Sprite Cache ---
+
+SDL_Texture* UI::getDonutSprite(uint16_t spriteId, uint8_t stars) {
+    // Build resource name using PKHeX DonutSpriteUtil logic
+    std::string name;
+    if (spriteId >= 198 && spriteId <= 202) {
+        static const char* SPECIAL[] = {
+            "donut_uni491",  // 198: Bad Dreams Cruller
+            "donut_uni383",  // 199: Omega Old-Fashioned Donut
+            "donut_uni382",  // 200: Alpha Old-Fashioned Donut
+            "donut_uni384",  // 201: Delta Old-Fashioned Donut
+            "donut_uni807",  // 202: Plasma-Glazed Donut
+        };
+        name = SPECIAL[spriteId - 198];
+    } else {
+        static const char* FLAVORS[] = {"sweet", "spicy", "sour", "bitter", "fresh", "mix"};
+        int variant = spriteId % 6;
+        int star = (stars <= 5) ? stars : 0;
+        char buf[64];
+        std::snprintf(buf, sizeof(buf), "donut_%s%02d", FLAVORS[variant], star);
+        name = buf;
+    }
+
+    // Check cache
+    auto it = spriteCache_.find(name);
+    if (it != spriteCache_.end())
+        return it->second;
+
+    // Load from romfs
+    std::string path;
+#ifdef __SWITCH__
+    path = "romfs:/sprites/" + name + ".png";
+#else
+    path = "romfs/sprites/" + name + ".png";
+#endif
+
+    SDL_Surface* surf = IMG_Load(path.c_str());
+    if (!surf) {
+        spriteCache_[name] = nullptr;
+        return nullptr;
+    }
+
+    SDL_Texture* tex = SDL_CreateTextureFromSurface(renderer_, surf);
+    SDL_FreeSurface(surf);
+    spriteCache_[name] = tex;
+    return tex;
+}
+
+void UI::freeSprites() {
+    for (auto& [key, tex] : spriteCache_) {
+        if (tex)
+            SDL_DestroyTexture(tex);
+    }
+    spriteCache_.clear();
+}
+
 // --- Drawing Primitives ---
 
 void UI::drawRect(int x, int y, int w, int h, SDL_Color c) {
@@ -731,10 +788,10 @@ void UI::drawListPanel() {
 
     int y = CONTENT_Y + 4;
     drawText("  #", LIST_X + 8, y, COL_TEXT_DIM, fontSmall_);
-    drawText("Stars", LIST_X + 55, y, COL_TEXT_DIM, fontSmall_);
-    drawText("Cal", LIST_X + 210, y, COL_TEXT_DIM, fontSmall_);
-    drawText("Boost", LIST_X + 280, y, COL_TEXT_DIM, fontSmall_);
-    drawText("Flavors", LIST_X + 345, y, COL_TEXT_DIM, fontSmall_);
+    drawText("Stars", LIST_X + 83, y, COL_TEXT_DIM, fontSmall_);
+    drawText("Cal", LIST_X + 230, y, COL_TEXT_DIM, fontSmall_);
+    drawText("Boost", LIST_X + 295, y, COL_TEXT_DIM, fontSmall_);
+    drawText("Flavors", LIST_X + 355, y, COL_TEXT_DIM, fontSmall_);
 
     drawRect(LIST_X + 4, y + 18, LIST_W - 8, 1, COL_TEXT_DIM);
 
@@ -763,25 +820,32 @@ void UI::drawListPanel() {
             std::snprintf(ibuf, sizeof(ibuf), "%3d", idx + 1);
             drawText(ibuf, LIST_X + 18, ry + 6, COL_TEXT, fontSmall_);
 
+            // Donut icon (24x24)
+            SDL_Texture* icon = getDonutSprite(d.donutSprite(), d.stars());
+            if (icon) {
+                SDL_Rect dst = {LIST_X + 55, ry + 3, 24, 24};
+                SDL_RenderCopy(renderer_, icon, nullptr, &dst);
+            }
+
             std::string stars = DonutInfo::starsString(d.stars());
-            drawText(stars, LIST_X + 55, ry + 6, COL_STARS, fontSmall_);
+            drawText(stars, LIST_X + 83, ry + 6, COL_STARS, fontSmall_);
 
             char cbuf[8];
             std::snprintf(cbuf, sizeof(cbuf), "%d", d.calories());
-            drawText(cbuf, LIST_X + 210, ry + 6, COL_TEXT, fontSmall_);
+            drawText(cbuf, LIST_X + 230, ry + 6, COL_TEXT, fontSmall_);
 
             char bbuf[8];
             std::snprintf(bbuf, sizeof(bbuf), "+%d", d.levelBoost());
-            drawText(bbuf, LIST_X + 280, ry + 6, COL_TEXT, fontSmall_);
+            drawText(bbuf, LIST_X + 295, ry + 6, COL_TEXT, fontSmall_);
 
             char fbuf[4];
             std::snprintf(fbuf, sizeof(fbuf), "%d", d.flavorCount());
-            drawText(fbuf, LIST_X + 360, ry + 6, COL_ACCENT, fontSmall_);
+            drawText(fbuf, LIST_X + 370, ry + 6, COL_ACCENT, fontSmall_);
         } else {
             char ibuf[8];
             std::snprintf(ibuf, sizeof(ibuf), "%3d", idx + 1);
             drawText(ibuf, LIST_X + 18, ry + 6, COL_EMPTY, fontSmall_);
-            drawText("(empty)", LIST_X + 55, ry + 6, COL_EMPTY, fontSmall_);
+            drawText("(empty)", LIST_X + 83, ry + 6, COL_EMPTY, fontSmall_);
         }
     }
 
@@ -808,9 +872,21 @@ void UI::drawDetailPanel() {
     int y = CONTENT_Y + 10;
     char buf[128];
 
+    // Donut sprite (80x80) at top-right of detail panel
+    constexpr int SPRITE_SZ = 80;
+    SDL_Texture* sprite = getDonutSprite(d.donutSprite(), d.stars());
+    if (sprite) {
+        SDL_Rect dst = {px + pw - SPRITE_SZ - 20, y, SPRITE_SZ, SPRITE_SZ};
+        SDL_RenderCopy(renderer_, sprite, nullptr, &dst);
+    }
+
     std::snprintf(buf, sizeof(buf), "Donut #%d", listCursor_ + 1);
     drawText(buf, px + 20, y, COL_CURSOR, fontLarge_);
-    y += 38;
+    y += 30;
+
+    std::snprintf(buf, sizeof(buf), "Sprite %d", d.donutSprite());
+    drawText(buf, px + 20, y, COL_TEXT_DIM, fontSmall_);
+    y += 24;
 
     drawText("Stars:", px + 20, y, COL_TEXT_DIM, font_);
     drawText(DonutInfo::starsString(d.stars()), px + 150, y, COL_STARS, font_);
@@ -823,11 +899,6 @@ void UI::drawDetailPanel() {
 
     std::snprintf(buf, sizeof(buf), "+%d", d.levelBoost());
     drawText("Level Boost:", px + 20, y, COL_TEXT_DIM, font_);
-    drawText(buf, px + 150, y, COL_TEXT, font_);
-    y += 28;
-
-    std::snprintf(buf, sizeof(buf), "%d", d.donutSprite());
-    drawText("Sprite ID:", px + 20, y, COL_TEXT_DIM, font_);
     drawText(buf, px + 150, y, COL_TEXT, font_);
     y += 28;
 
@@ -892,6 +963,14 @@ void UI::drawEditPanel() {
 
     char buf[128];
     int y = CONTENT_Y + 10;
+
+    // Donut sprite preview (64x64) at top-right
+    constexpr int EDIT_SPRITE_SZ = 64;
+    SDL_Texture* sprite = getDonutSprite(d.donutSprite(), d.stars());
+    if (sprite) {
+        SDL_Rect dst = {px + pw - EDIT_SPRITE_SZ - 20, y, EDIT_SPRITE_SZ, EDIT_SPRITE_SZ};
+        SDL_RenderCopy(renderer_, sprite, nullptr, &dst);
+    }
 
     std::snprintf(buf, sizeof(buf), "Editing Donut #%d", listCursor_ + 1);
     drawText(buf, px + 20, y, COL_CURSOR, fontLarge_);
