@@ -373,6 +373,7 @@ void UI::run(const std::string& basePath, const std::string& savePath) {
                 }
                 if (state_ == UIState::Batch) drawBatchMenu();
                 if (state_ == UIState::Import) drawImportPanel();
+                if (state_ == UIState::ExitMenu) drawExitMenu();
                 drawDonutStatusBar();
             }
             drawAboutPopup();
@@ -408,6 +409,7 @@ void UI::run(const std::string& basePath, const std::string& savePath) {
                 }
                 if (state_ == UIState::Batch) drawBatchMenu();
                 if (state_ == UIState::Import) drawImportPanel();
+                if (state_ == UIState::ExitMenu) drawExitMenu();
                 drawDonutStatusBar();
             }
         }
@@ -642,7 +644,7 @@ void UI::drawAboutPopup() {
     drawRect(0, 0, SCREEN_W, SCREEN_H, {0, 0, 0, 140});
 
     constexpr int POP_W = 700;
-    constexpr int POP_H = 300;
+    constexpr int POP_H = 490;
     int px = (SCREEN_W - POP_W) / 2;
     int py = (SCREEN_H - POP_H) / 2;
 
@@ -652,9 +654,11 @@ void UI::drawAboutPopup() {
     int cx = px + POP_W / 2;
     int y = py + 25;
 
+    // Title
     drawTextCentered("pkBakery - Donut Editor", cx, y, COL_STARS, fontLarge_);
     y += 38;
 
+    // Version / author
     drawTextCentered("v" APP_VERSION " - Developed by " APP_AUTHOR, cx, y, COL_TEXT_DIM, fontSmall_);
     y += 22;
     drawTextCentered("github.com/Insektaure", cx, y, COL_TEXT_DIM, fontSmall_);
@@ -665,12 +669,41 @@ void UI::drawAboutPopup() {
     SDL_RenderDrawLine(renderer_, px + 30, y, px + POP_W - 30, y);
     y += 20;
 
+    // Description
     drawTextCentered("Pokemon Donut Editor for Nintendo Switch", cx, y, COL_TEXT, font_);
     y += 28;
     drawTextCentered("Edit donuts in Pokemon Legends: Z-A save files.", cx, y, COL_TEXT, font_);
-    y += 35;
+    y += 30;
 
-    drawTextCentered("Press - or B to close", cx, y, COL_TEXT_DIM, fontSmall_);
+    // Divider
+    SDL_SetRenderDrawColor(renderer_, COL_EDIT_FIELD.r, COL_EDIT_FIELD.g, COL_EDIT_FIELD.b, 255);
+    SDL_RenderDrawLine(renderer_, px + 30, y, px + POP_W - 30, y);
+    y += 20;
+
+    // Credits
+    drawTextCentered("Credits", cx, y, COL_ACCENT, font_);
+    y += 24;
+    drawTextCentered("Based on PKHeX by kwsch & PokeCrypto research.", cx, y, COL_TEXT_DIM, fontSmall_);
+    y += 20;
+    drawTextCentered("Save backup & write logic based on JKSV by J-D-K.", cx, y, COL_TEXT_DIM, fontSmall_);
+    y += 30;
+
+    // Divider
+    SDL_SetRenderDrawColor(renderer_, COL_EDIT_FIELD.r, COL_EDIT_FIELD.g, COL_EDIT_FIELD.b, 255);
+    SDL_RenderDrawLine(renderer_, px + 30, y, px + POP_W - 30, y);
+    y += 20;
+
+    // Controls
+    drawTextCentered("Controls", cx, y, COL_ACCENT, font_);
+    y += 28;
+    drawText("A: Edit    B: Back    X: Delete    Y: Batch/Export/Import", px + 50, y, COL_TEXT_DIM, fontSmall_);
+    y += 20;
+    drawText("L/R: Page Up/Down    +: Exit Menu    -: About", px + 50, y, COL_TEXT_DIM, fontSmall_);
+    y += 20;
+    drawText("Edit: DPad U/D: Field    L/R: Value    L1/R1: x10", px + 50, y, COL_TEXT_DIM, fontSmall_);
+
+    // Footer
+    drawTextCentered("Press - or B to close", cx, py + POP_H - 22, COL_TEXT_DIM, fontSmall_);
 }
 
 // --- Sprite Cache ---
