@@ -172,6 +172,12 @@ make clean
 
 Produces `pkBakery.nro`. Place in `sdmc:/switch/pkBakery/` on your SD card.
 
+### Running
+
+Launch via a homebrew launcher in **title takeover mode**.
+
+Applet mode **is not supported** due to memory constraints.
+
 ## Screenshots
 
 <div align="center">
