@@ -15,7 +15,6 @@ enum class AppScreen { ProfileSelector, MainView };
 enum class UIState { List, Edit, Batch };
 
 enum class EditField {
-    DonutSprite, BerryName,
     Berry1, Berry2, Berry3, Berry4, Berry5, Berry6, Berry7, Berry8,
     Flavor0, Flavor1, Flavor2,
     COUNT

@@ -1074,7 +1074,6 @@ void UI::drawDetailPanel() {
 // --- Donut Editor: Edit Panel ---
 
 static const char* EDIT_LABELS[] = {
-    "Sprite ID", "Berry Name",
     "Berry 1", "Berry 2", "Berry 3", "Berry 4",
     "Berry 5", "Berry 6", "Berry 7", "Berry 8",
     "Flavor 1", "Flavor 2", "Flavor 3",
@@ -1124,13 +1123,6 @@ void UI::drawEditPanel() {
 
         std::string val;
         switch (static_cast<EditField>(f)) {
-            case EditField::DonutSprite:
-                val = std::to_string(d.donutSprite());
-                break;
-            case EditField::BerryName:
-                std::snprintf(buf, sizeof(buf), "%s (%d)", DonutInfo::getBerryName(d.berryName()), d.berryName());
-                val = buf;
-                break;
             case EditField::Berry1: case EditField::Berry2:
             case EditField::Berry3: case EditField::Berry4:
             case EditField::Berry5: case EditField::Berry6:
@@ -1524,18 +1516,6 @@ void UI::adjustFieldValue(int direction) {
 
     auto field = static_cast<EditField>(editField_);
     switch (field) {
-        case EditField::DonutSprite: {
-            int v = d.donutSprite() + direction;
-            if (v < 0) v = 202;
-            if (v > 202) v = 0;
-            d.setDonutSprite(static_cast<uint16_t>(v));
-            break;
-        }
-        case EditField::BerryName: {
-            int idx = cycleBerry(d.berryName(), direction);
-            d.setBerryName(DonutInfo::VALID_BERRY_IDS[idx]);
-            break;
-        }
         case EditField::Berry1: case EditField::Berry2:
         case EditField::Berry3: case EditField::Berry4:
         case EditField::Berry5: case EditField::Berry6:

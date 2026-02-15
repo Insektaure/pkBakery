@@ -711,6 +711,7 @@ void DonutInfo::recalcStats(Donut9a& d) {
     int sumBoost = 0;
     int sumCal = 0;
     int flavorScore = 0;
+    int flavors[5] = {};
     for (int i = 0; i < 8; i++) {
         uint16_t item = d.berry(i);
         int idx = findBerryByItem(item);
@@ -719,6 +720,11 @@ void DonutInfo::recalcStats(Donut9a& d) {
         sumBoost += b.boost;
         sumCal += b.calories;
         flavorScore += b.flavorScore();
+        flavors[0] += b.spicy;
+        flavors[1] += b.fresh;
+        flavors[2] += b.sweet;
+        flavors[3] += b.bitter;
+        flavors[4] += b.sour;
     }
     uint8_t stars = calcStarRating(flavorScore);
     // Star rating multiplier: (10 + stars) / 10 applied via integer division
@@ -728,4 +734,35 @@ void DonutInfo::recalcStats(Donut9a& d) {
     d.setCalories(static_cast<uint16_t>(totalCal > 9999 ? 9999 : totalCal));
     d.setLevelBoost(static_cast<uint8_t>(totalBoost));
     d.setStars(stars);
+    d.setBerryName(d.berry(0));
+
+    // Auto-calculate sprite: donutIdx * 6 + dominant flavor variant
+    // Variant: 0=sweet, 1=spicy, 2=sour, 3=bitter, 4=fresh, 5=mix
+    int berryIdx = findBerryByItem(d.berry(0));
+    if (berryIdx >= 0) {
+        uint8_t donutIdx = BERRIES[berryIdx].donutIdx;
+        // Find dominant flavor
+        int maxVal = 0;
+        for (int i = 0; i < 5; i++)
+            if (flavors[i] > maxVal) maxVal = flavors[i];
+        int variant;
+        if (maxVal == 0) {
+            variant = 0;
+        } else {
+            // Count how many flavors share the max
+            int count = 0;
+            for (int i = 0; i < 5; i++)
+                if (flavors[i] == maxVal) count++;
+            if (count > 1) {
+                variant = 5; // mix
+            } else {
+                // Map: [0]=spicy→1, [1]=fresh→4, [2]=sweet→0, [3]=bitter→3, [4]=sour→2
+                static const int FLAVOR_TO_VARIANT[] = {1, 4, 0, 3, 2};
+                for (int i = 0; i < 5; i++) {
+                    if (flavors[i] == maxVal) { variant = FLAVOR_TO_VARIANT[i]; break; }
+                }
+            }
+        }
+        d.setDonutSprite(static_cast<uint16_t>(donutIdx * 6 + variant));
+    }
 }
