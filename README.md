@@ -188,7 +188,6 @@ Applet mode **is not supported** due to memory constraints.
   <img src="screenshots/005.jpg">
   <img src="screenshots/006.jpg">
   <img src="screenshots/007.jpg">
-  <img src="screenshots/008.jpg">
 </div>  
 
 ## Credits
