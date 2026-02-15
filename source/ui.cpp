@@ -121,13 +121,13 @@ void UI::showSplash() {
     while (SDL_GetTicks() - start < 2500) {
         SDL_Event e;
         while (SDL_PollEvent(&e)) {}
-        SDL_SetRenderDrawColor(renderer_, COLOR_BG.r, COLOR_BG.g, COLOR_BG.b, 255);
+        SDL_SetRenderDrawColor(renderer_, COL_BG.r, COL_BG.g, COL_BG.b, 255);
         SDL_RenderClear(renderer_);
         if (splash) {
             SDL_RenderCopy(renderer_, splash, nullptr, nullptr);
         } else {
-            drawTextCentered(APP_TITLE, SCREEN_W / 2, SCREEN_H / 2 - 20, COLOR_CURSOR, fontLarge_);
-            drawTextCentered("v" APP_VERSION, SCREEN_W / 2, SCREEN_H / 2 + 20, COLOR_TEXT_DIM, fontSmall_);
+            drawTextCentered(APP_TITLE, SCREEN_W / 2, SCREEN_H / 2 - 20, COL_CURSOR, fontLarge_);
+            drawTextCentered("v" APP_VERSION, SCREEN_W / 2, SCREEN_H / 2 + 20, COL_TEXT_DIM, fontSmall_);
         }
         SDL_RenderPresent(renderer_);
         SDL_Delay(16);
@@ -137,7 +137,7 @@ void UI::showSplash() {
     for (int alpha = 0; alpha <= 255; alpha += 6) {
         SDL_Event e;
         while (SDL_PollEvent(&e)) {}
-        SDL_SetRenderDrawColor(renderer_, COLOR_BG.r, COLOR_BG.g, COLOR_BG.b, 255);
+        SDL_SetRenderDrawColor(renderer_, COL_BG.r, COL_BG.g, COL_BG.b, 255);
         SDL_RenderClear(renderer_);
         if (splash) {
             SDL_SetTextureAlphaMod(splash, 255 - alpha);
@@ -172,12 +172,12 @@ void UI::showMessageAndWait(const std::string& title, const std::string& body) {
             }
         }
 
-        SDL_SetRenderDrawColor(renderer_, COLOR_BG.r, COLOR_BG.g, COLOR_BG.b, 255);
+        SDL_SetRenderDrawColor(renderer_, COL_BG.r, COL_BG.g, COL_BG.b, 255);
         SDL_RenderClear(renderer_);
 
         drawTextCentered(title, SCREEN_W / 2, SCREEN_H / 2 - 40, COLOR_RED, fontLarge_);
-        drawTextCentered(body, SCREEN_W / 2, SCREEN_H / 2 + 15, COLOR_TEXT_DIM, font_);
-        drawTextCentered("Press B to dismiss", SCREEN_W / 2, SCREEN_H / 2 + 65, COLOR_TEXT_DIM, fontSmall_);
+        drawTextCentered(body, SCREEN_W / 2, SCREEN_H / 2 + 15, COL_TEXT_DIM, font_);
+        drawTextCentered("Press B to dismiss", SCREEN_W / 2, SCREEN_H / 2 + 65, COL_TEXT_DIM, fontSmall_);
 
         SDL_RenderPresent(renderer_);
         SDL_Delay(16);
@@ -228,15 +228,15 @@ bool UI::showConfirm(const std::string& title, const std::string& body) {
 void UI::showWorking(const std::string& msg) {
     if (!renderer_) return;
 
-    SDL_SetRenderDrawColor(renderer_, COLOR_BG.r, COLOR_BG.g, COLOR_BG.b, 255);
+    SDL_SetRenderDrawColor(renderer_, COL_BG.r, COL_BG.g, COL_BG.b, 255);
     SDL_RenderClear(renderer_);
 
     constexpr int POP_W = 400;
     constexpr int POP_H = 160;
     int popX = (SCREEN_W - POP_W) / 2;
     int popY = (SCREEN_H - POP_H) / 2;
-    drawRect(popX, popY, POP_W, POP_H, COLOR_PANEL_BG);
-    drawRectOutline(popX, popY, POP_W, POP_H, COLOR_TEXT_DIM, 2);
+    drawRect(popX, popY, POP_W, POP_H, COL_PANEL);
+    drawRectOutline(popX, popY, POP_W, POP_H, COL_TEXT_DIM, 2);
 
     // Gear icon
     int gearCX = SCREEN_W / 2;
@@ -255,7 +255,7 @@ void UI::showWorking(const std::string& msg) {
         }
     };
 
-    SDL_Color gearColor = COLOR_ARROW;
+    SDL_Color gearColor = COL_ACCENT;
     SDL_SetRenderDrawColor(renderer_, gearColor.r, gearColor.g, gearColor.b, gearColor.a);
     for (int i = 0; i < TEETH; i++) {
         double angle = i * (3.14159265 * 2.0 / TEETH);
@@ -266,9 +266,9 @@ void UI::showWorking(const std::string& msg) {
     }
 
     fillCircle(gearCX, gearCY, OUTER_R, gearColor);
-    fillCircle(gearCX, gearCY, HOLE_R, COLOR_PANEL_BG);
+    fillCircle(gearCX, gearCY, HOLE_R, COL_PANEL);
 
-    drawTextCentered(msg, SCREEN_W / 2, popY + POP_H - 32, COLOR_TEXT, font_);
+    drawTextCentered(msg, SCREEN_W / 2, popY + POP_H - 32, COL_TEXT, font_);
 
     SDL_RenderPresent(renderer_);
 }
@@ -404,10 +404,10 @@ void UI::updateStick(int16_t axisX, int16_t axisY) {
 // --- Profile Selector ---
 
 void UI::drawProfileSelectorFrame() {
-    SDL_SetRenderDrawColor(renderer_, COLOR_BG.r, COLOR_BG.g, COLOR_BG.b, 255);
+    SDL_SetRenderDrawColor(renderer_, COL_BG.r, COL_BG.g, COL_BG.b, 255);
     SDL_RenderClear(renderer_);
 
-    drawTextCentered("Select Profile", SCREEN_W / 2, 40, COLOR_TEXT, font_);
+    drawTextCentered("Select Profile", SCREEN_W / 2, 40, COL_TEXT, font_);
 
     const auto& profiles = account_.profiles();
     int count = (int)profiles.size();
@@ -426,10 +426,10 @@ void UI::drawProfileSelectorFrame() {
         int cardY = startY;
 
         if (i == profileSelCursor_) {
-            drawRect(cardX, cardY, CARD_W, CARD_H, {60, 60, 80, 255});
-            drawRectOutline(cardX, cardY, CARD_W, CARD_H, COLOR_CURSOR, 3);
+            drawRect(cardX, cardY, CARD_W, CARD_H, COL_ROW_SEL);
+            drawRectOutline(cardX, cardY, CARD_W, CARD_H, COL_CURSOR, 3);
         } else {
-            drawRect(cardX, cardY, CARD_W, CARD_H, COLOR_PANEL_BG);
+            drawRect(cardX, cardY, CARD_W, CARD_H, COL_PANEL);
         }
 
         int iconX = cardX + (CARD_W - ICON_SIZE) / 2;
@@ -439,17 +439,17 @@ void UI::drawProfileSelectorFrame() {
             SDL_Rect dst = {iconX, iconY, ICON_SIZE, ICON_SIZE};
             SDL_RenderCopy(renderer_, profiles[i].iconTexture, nullptr, &dst);
         } else {
-            drawRect(iconX, iconY, ICON_SIZE, ICON_SIZE, {80, 80, 120, 255});
+            drawRect(iconX, iconY, ICON_SIZE, ICON_SIZE, COL_EMPTY);
             if (!profiles[i].nickname.empty()) {
                 std::string initial(1, profiles[i].nickname[0]);
                 drawTextCentered(initial, iconX + ICON_SIZE / 2, iconY + ICON_SIZE / 2,
-                                 COLOR_TEXT, font_);
+                                 COL_TEXT, font_);
             }
         }
 
         std::string name = profiles[i].nickname;
         if (name.length() > 14) name = name.substr(0, 13) + ".";
-        drawTextCentered(name, cardX + CARD_W / 2, cardY + ICON_SIZE + 24, COLOR_TEXT, fontSmall_);
+        drawTextCentered(name, cardX + CARD_W / 2, cardY + ICON_SIZE + 24, COL_TEXT, fontSmall_);
     }
 
     drawStatusBar("A:Select  -:About  +:Quit");
@@ -611,31 +611,31 @@ void UI::drawAboutPopup() {
     int px = (SCREEN_W - POP_W) / 2;
     int py = (SCREEN_H - POP_H) / 2;
 
-    drawRect(px, py, POP_W, POP_H, COLOR_PANEL_BG);
-    drawRectOutline(px, py, POP_W, POP_H, {0x30, 0x30, 0x55, 255}, 2);
+    drawRect(px, py, POP_W, POP_H, COL_PANEL);
+    drawRectOutline(px, py, POP_W, POP_H, COL_EDIT_FIELD, 2);
 
     int cx = px + POP_W / 2;
     int y = py + 25;
 
-    drawTextCentered("pkBakery - Donut Editor", cx, y, COLOR_SHINY, fontLarge_);
+    drawTextCentered("pkBakery - Donut Editor", cx, y, COL_STARS, fontLarge_);
     y += 38;
 
-    drawTextCentered("v" APP_VERSION " - Developed by " APP_AUTHOR, cx, y, COLOR_TEXT_DIM, fontSmall_);
+    drawTextCentered("v" APP_VERSION " - Developed by " APP_AUTHOR, cx, y, COL_TEXT_DIM, fontSmall_);
     y += 22;
-    drawTextCentered("github.com/Insektaure", cx, y, COLOR_TEXT_DIM, fontSmall_);
+    drawTextCentered("github.com/Insektaure", cx, y, COL_TEXT_DIM, fontSmall_);
     y += 30;
 
     // Divider
-    SDL_SetRenderDrawColor(renderer_, 0x30, 0x30, 0x55, 255);
+    SDL_SetRenderDrawColor(renderer_, COL_EDIT_FIELD.r, COL_EDIT_FIELD.g, COL_EDIT_FIELD.b, 255);
     SDL_RenderDrawLine(renderer_, px + 30, y, px + POP_W - 30, y);
     y += 20;
 
-    drawTextCentered("Pokemon Donut Editor for Nintendo Switch", cx, y, COLOR_TEXT, font_);
+    drawTextCentered("Pokemon Donut Editor for Nintendo Switch", cx, y, COL_TEXT, font_);
     y += 28;
-    drawTextCentered("Edit donuts in Pokemon Legends: Z-A save files.", cx, y, COLOR_TEXT, font_);
+    drawTextCentered("Edit donuts in Pokemon Legends: Z-A save files.", cx, y, COL_TEXT, font_);
     y += 35;
 
-    drawTextCentered("Press - or B to close", cx, y, COLOR_TEXT_DIM, fontSmall_);
+    drawTextCentered("Press - or B to close", cx, y, COL_TEXT_DIM, fontSmall_);
 }
 
 // --- Drawing Primitives ---
@@ -686,8 +686,8 @@ void UI::drawTextRight(const std::string& text, int x, int y, SDL_Color c, TTF_F
 }
 
 void UI::drawStatusBar(const std::string& msg) {
-    drawRect(0, SCREEN_H - 35, SCREEN_W, 35, {20, 20, 30, 255});
-    drawText(msg, 15, SCREEN_H - 30, COLOR_STATUS, fontSmall_);
+    drawRect(0, SCREEN_H - 35, SCREEN_W, 35, COL_STATUS_BG);
+    drawText(msg, 15, SCREEN_H - 30, COL_STATUS, fontSmall_);
 }
 
 // --- Donut Editor: Header ---

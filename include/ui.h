@@ -59,18 +59,8 @@ private:
     static constexpr int CONTENT_H   = SCREEN_H - HEADER_H - STATUS_H - 8;
     static constexpr int ROW_H       = 32;
 
-    // Colors - pkHouse style for selectors
-    static constexpr SDL_Color COLOR_BG         = {30, 30, 40, 255};
-    static constexpr SDL_Color COLOR_PANEL_BG   = {45, 45, 60, 255};
-    static constexpr SDL_Color COLOR_CURSOR      = {255, 220, 50, 255};
-    static constexpr SDL_Color COLOR_TEXT        = {240, 240, 240, 255};
-    static constexpr SDL_Color COLOR_TEXT_DIM    = {160, 160, 170, 255};
-    static constexpr SDL_Color COLOR_SHINY       = {255, 215, 0, 255};
-    static constexpr SDL_Color COLOR_ARROW       = {180, 180, 200, 255};
-    static constexpr SDL_Color COLOR_STATUS      = {140, 200, 140, 255};
+    // Colors - warm bakery theme
     static constexpr SDL_Color COLOR_RED         = {220, 60, 60, 255};
-
-    // Colors - warm bakery theme for donut editor
     static constexpr SDL_Color COL_BG         = {35, 25, 20, 255};
     static constexpr SDL_Color COL_PANEL      = {50, 40, 35, 255};
     static constexpr SDL_Color COL_HEADER     = {60, 45, 35, 255};
