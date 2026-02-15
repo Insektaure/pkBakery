@@ -10,6 +10,25 @@ void Donut9a::applyTimestamp(int bias) {
     if (bias != 0)
         now += static_cast<uint64_t>(bias);
     setMillisecondsSince1970(now);
+
+    // Also set DateTime1900 packed bitfield at offset 0x20
+    // Format: bits[0:11]=year-1900, [12:15]=month(0-idx), [16:20]=day,
+    //         [21:25]=hour, [26:31]=minute, byte[4]=second
+    time_t secs = static_cast<time_t>(now / 1000);
+    struct tm* t = localtime(&secs);
+    if (t) {
+        uint32_t raw = 0;
+        raw |= static_cast<uint32_t>(t->tm_year) & 0xFFF;
+        raw |= (static_cast<uint32_t>(t->tm_mon) & 0xF) << 12;
+        raw |= (static_cast<uint32_t>(t->tm_mday) & 0x1F) << 16;
+        raw |= (static_cast<uint32_t>(t->tm_hour) & 0x1F) << 21;
+        raw |= (static_cast<uint32_t>(t->tm_min) & 0x3F) << 26;
+        std::memcpy(data + 0x20, &raw, 4);
+        data[0x24] = static_cast<uint8_t>(t->tm_sec);
+        data[0x25] = 0;
+        data[0x26] = 0;
+        data[0x27] = 0;
+    }
 }
 
 // --- Simple PRNG for batch operations ---
