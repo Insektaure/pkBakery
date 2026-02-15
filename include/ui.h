@@ -6,13 +6,14 @@
 #include <SDL2/SDL_ttf.h>
 #include <SDL2/SDL_image.h>
 #include <string>
+#include <vector>
 #include <unordered_map>
 
 // App-level screen state
 enum class AppScreen { ProfileSelector, MainView };
 
 // Donut editor sub-states
-enum class UIState { List, Edit, Batch };
+enum class UIState { List, Edit, Batch, Import, ExitMenu };
 
 enum class EditField {
     Berry1, Berry2, Berry3, Berry4, Berry5, Berry6, Berry7, Berry8,
@@ -22,9 +23,11 @@ enum class EditField {
 
 enum class BatchOp {
     FillShiny, FillRandomLv3, CloneToAll, DeleteSelected,
-    DeleteAll, Compress, Cancel,
+    DeleteAll, Compress, ExportDonut, ImportDonut, Cancel,
     COUNT
 };
+
+enum class ExitOp { SaveAndQuit, SaveAndBack, QuitWithoutSaving, Cancel, COUNT };
 
 class UI {
 public:
@@ -112,6 +115,14 @@ private:
     int editField_   = 0;
     int batchCursor_ = 0;
 
+    // Import file picker state
+    std::vector<std::string> importFiles_;
+    int importCursor_ = 0;
+    int importScroll_ = 0;
+
+    // Exit menu state
+    int exitCursor_ = 0;
+
     // Input repeat (donut editor)
     uint32_t repeatDir_   = 0;
     uint32_t repeatStart_ = 0;
@@ -133,6 +144,9 @@ private:
     SDL_Texture* getDonutSprite(uint16_t spriteId, uint8_t stars);
     void freeSprites();
 
+    // Redraws the current screen (used as background for popup overlays)
+    void drawCurrentFrame();
+
     // Rendering helpers
     void drawTextCentered(const std::string& text, int cx, int cy, SDL_Color color, TTF_Font* f);
     void drawStatusBar(const std::string& msg);
@@ -151,12 +165,16 @@ private:
     void drawDetailPanel();
     void drawEditPanel();
     void drawBatchMenu();
+    void drawImportPanel();
+    void drawExitMenu();
 
     // Donut editor input
     void handleDonutInput(bool& running);
     void handleListInput(int button, bool& running);
     void handleEditInput(int button);
     void handleBatchInput(int button);
+    void handleImportInput(int button);
+    void handleExitMenuInput(int button, bool& running);
     bool handleRepeat(uint32_t button);
     void clearRepeat();
 
@@ -164,6 +182,14 @@ private:
     void adjustFieldValue(int direction);
     int cycleBerry(uint16_t current, int direction);
     int cycleFlavor(uint64_t current, int direction);
+
+    // Export / Import
+    bool exportDonut(int index);
+    bool importDonut(const std::string& filename);
+    void scanDonutFiles();
+    std::string showKeyboard(const std::string& defaultText);
+    std::string sanitizeFilename(const std::string& input);
+    std::string buildDefaultExportName(int index);
 
     // Utility
     int totalPages();

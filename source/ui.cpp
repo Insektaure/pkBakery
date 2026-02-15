@@ -5,6 +5,8 @@
 #include <ctime>
 #include <string>
 #include <sys/stat.h>
+#include <dirent.h>
+#include <algorithm>
 
 #ifdef __SWITCH__
 #include <switch.h>
@@ -173,12 +175,20 @@ void UI::showMessageAndWait(const std::string& title, const std::string& body) {
             }
         }
 
-        SDL_SetRenderDrawColor(renderer_, COL_BG.r, COL_BG.g, COL_BG.b, 255);
-        SDL_RenderClear(renderer_);
+        drawCurrentFrame();
 
-        drawTextCentered(title, SCREEN_W / 2, SCREEN_H / 2 - 40, COLOR_RED, fontLarge_);
-        drawTextCentered(body, SCREEN_W / 2, SCREEN_H / 2 + 15, COL_TEXT_DIM, font_);
-        drawTextCentered("Press B to dismiss", SCREEN_W / 2, SCREEN_H / 2 + 65, COL_TEXT_DIM, fontSmall_);
+        constexpr int POP_W = 480;
+        constexpr int POP_H = 180;
+        int px = (SCREEN_W - POP_W) / 2;
+        int py = (SCREEN_H - POP_H) / 2;
+
+        drawRect(0, 0, SCREEN_W, SCREEN_H, {0, 0, 0, 140});
+        drawRect(px, py, POP_W, POP_H, COL_BATCH_BG);
+        drawRectOutline(px, py, POP_W, POP_H, COL_CURSOR, 2);
+
+        drawTextCentered(title, SCREEN_W / 2, py + 35, COL_CURSOR, fontLarge_);
+        drawTextCentered(body, SCREEN_W / 2, py + 85, COL_TEXT, font_);
+        drawTextCentered("Press B to dismiss", SCREEN_W / 2, py + POP_H - 30, COL_TEXT_DIM, fontSmall_);
 
         SDL_RenderPresent(renderer_);
         SDL_Delay(16);
@@ -207,13 +217,14 @@ bool UI::showConfirm(const std::string& title, const std::string& body) {
             }
         }
 
-        SDL_SetRenderDrawColor(renderer_, COL_BG.r, COL_BG.g, COL_BG.b, 255);
-        SDL_RenderClear(renderer_);
+        drawCurrentFrame();
 
         constexpr int POP_W = 480;
         constexpr int POP_H = 180;
         int px = (SCREEN_W - POP_W) / 2;
         int py = (SCREEN_H - POP_H) / 2;
+
+        drawRect(0, 0, SCREEN_W, SCREEN_H, {0, 0, 0, 140});
         drawRect(px, py, POP_W, POP_H, COL_BATCH_BG);
         drawRectOutline(px, py, POP_W, POP_H, COL_CURSOR, 2);
 
@@ -272,6 +283,30 @@ void UI::showWorking(const std::string& msg) {
     drawTextCentered(msg, SCREEN_W / 2, popY + POP_H - 32, COL_TEXT, font_);
 
     SDL_RenderPresent(renderer_);
+}
+
+// --- Draw Current Frame (for popup backgrounds) ---
+
+void UI::drawCurrentFrame() {
+    if (screen_ == AppScreen::ProfileSelector) {
+        drawProfileSelectorFrame();
+    } else {
+        SDL_SetRenderDrawColor(renderer_, COL_BG.r, COL_BG.g, COL_BG.b, 255);
+        SDL_RenderClear(renderer_);
+        drawDonutHeader();
+        if (save_.hasDonutBlock()) {
+            drawListPanel();
+            if (state_ == UIState::Edit) drawEditPanel();
+            else drawDetailPanel();
+        } else {
+            drawText("No donut data found in save file.", DETAIL_X + 20, SCREEN_H / 2, COL_TEXT, font_);
+            drawText("Make sure you have a Pokemon Legends Z-A save.", DETAIL_X + 20, SCREEN_H / 2 + 30, COL_TEXT_DIM, fontSmall_);
+        }
+        if (state_ == UIState::Batch) drawBatchMenu();
+        if (state_ == UIState::Import) drawImportPanel();
+        if (state_ == UIState::ExitMenu) drawExitMenu();
+        drawDonutStatusBar();
+    }
 }
 
 // --- Main Run Loop ---
@@ -340,6 +375,7 @@ void UI::run(const std::string& basePath, const std::string& savePath) {
                     else drawDetailPanel();
                 }
                 if (state_ == UIState::Batch) drawBatchMenu();
+                if (state_ == UIState::Import) drawImportPanel();
                 drawDonutStatusBar();
             }
             drawAboutPopup();
@@ -374,6 +410,7 @@ void UI::run(const std::string& basePath, const std::string& savePath) {
                     drawText("Make sure you have a Pokemon Legends Z-A save.", DETAIL_X + 20, SCREEN_H / 2 + 30, COL_TEXT_DIM, fontSmall_);
                 }
                 if (state_ == UIState::Batch) drawBatchMenu();
+                if (state_ == UIState::Import) drawImportPanel();
                 drawDonutStatusBar();
             }
         }
@@ -889,12 +926,18 @@ void UI::drawDonutStatusBar() {
     const char* msg = "";
     switch (state_) {
         case UIState::List:
-            msg = "DPad:Move  L/R:Page  A:Edit  X:Delete  Y:Batch  +:Save&Exit  -:About  B:Back";
+            msg = "DPad:Move  L/R:Page  A:Edit  X:Delete  Y:Batch  +:Exit  -:About  B:Back";
             break;
         case UIState::Edit:
             msg = "DPad U/D:Field  L/R:Value  L1/R1:x10  A:Confirm  B:Cancel";
             break;
         case UIState::Batch:
+            msg = "DPad U/D:Select  A:Confirm  B:Cancel";
+            break;
+        case UIState::Import:
+            msg = "DPad U/D:Select  A:Import  B:Cancel";
+            break;
+        case UIState::ExitMenu:
             msg = "DPad U/D:Select  A:Confirm  B:Cancel";
             break;
     }
@@ -1160,13 +1203,15 @@ static const char* BATCH_LABELS[] = {
     "Delete Selected Donut",
     "Delete ALL Donuts",
     "Compress (remove gaps)",
+    "Export Donut to File",
+    "Import Donut from File",
     "Cancel",
 };
 
 void UI::drawBatchMenu() {
     drawRect(0, 0, SCREEN_W, SCREEN_H, {0, 0, 0, 140});
 
-    int mw = 380, mh = 300;
+    int mw = 380, mh = 370;
     int mx = (SCREEN_W - mw) / 2;
     int my = (SCREEN_H - mh) / 2;
 
@@ -1267,9 +1312,11 @@ void UI::handleDonutInput(bool& running) {
         }
 
         switch (state_) {
-            case UIState::List:  handleListInput(button, running); break;
-            case UIState::Edit:  handleEditInput(button); break;
-            case UIState::Batch: handleBatchInput(button); break;
+            case UIState::List:     handleListInput(button, running); break;
+            case UIState::Edit:     handleEditInput(button); break;
+            case UIState::Batch:    handleBatchInput(button); break;
+            case UIState::Import:   handleImportInput(button); break;
+            case UIState::ExitMenu: handleExitMenuInput(button, running); break;
         }
     }
 
@@ -1278,9 +1325,11 @@ void UI::handleDonutInput(bool& running) {
         if (handleRepeat(repeatDir_)) {
             bool dummy = true;
             switch (state_) {
-                case UIState::List:  handleListInput(repeatDir_, dummy); break;
-                case UIState::Edit:  handleEditInput(repeatDir_); break;
-                case UIState::Batch: handleBatchInput(repeatDir_); break;
+                case UIState::List:     handleListInput(repeatDir_, dummy); break;
+                case UIState::Edit:     handleEditInput(repeatDir_); break;
+                case UIState::Batch:    handleBatchInput(repeatDir_); break;
+                case UIState::Import:   handleImportInput(repeatDir_); break;
+                case UIState::ExitMenu: handleExitMenuInput(repeatDir_, dummy); break;
             }
         }
     }
@@ -1314,6 +1363,20 @@ void UI::handleDonutInput(bool& running) {
                     else if (stickDirY_ > 0)
                         handleBatchInput(SDL_CONTROLLER_BUTTON_DPAD_DOWN);
                     break;
+                case UIState::Import:
+                    if (stickDirY_ < 0)
+                        handleImportInput(SDL_CONTROLLER_BUTTON_DPAD_UP);
+                    else if (stickDirY_ > 0)
+                        handleImportInput(SDL_CONTROLLER_BUTTON_DPAD_DOWN);
+                    break;
+                case UIState::ExitMenu: {
+                    bool dm = true;
+                    if (stickDirY_ < 0)
+                        handleExitMenuInput(SDL_CONTROLLER_BUTTON_DPAD_UP, dm);
+                    else if (stickDirY_ > 0)
+                        handleExitMenuInput(SDL_CONTROLLER_BUTTON_DPAD_DOWN, dm);
+                    break;
+                }
             }
             stickMoveTime_ = now;
             stickMoved_ = true;
@@ -1401,11 +1464,9 @@ void UI::handleListInput(int button, bool& running) {
             state_ = UIState::Batch;
             break;
 
-        case SDL_CONTROLLER_BUTTON_START: // + = save & exit
-            if (showConfirm("Save & Exit", "Save changes and exit to home?")) {
-                saveNow_ = true;
-                running = false;
-            }
+        case SDL_CONTROLLER_BUTTON_START: // + = exit menu
+            exitCursor_ = 0;
+            state_ = UIState::ExitMenu;
             break;
 
         case SDL_CONTROLLER_BUTTON_BACK: // - = about
@@ -1413,8 +1474,10 @@ void UI::handleListInput(int button, bool& running) {
             break;
 
         case SDL_CONTROLLER_BUTTON_A: // Switch B = back to profile selector
-            account_.unmountSave();
-            screen_ = AppScreen::ProfileSelector;
+            if (showConfirm("Go Back?", "Unsaved changes will be lost.")) {
+                account_.unmountSave();
+                screen_ = AppScreen::ProfileSelector;
+            }
             break;
     }
 }
@@ -1495,6 +1558,20 @@ void UI::handleBatchInput(int button) {
                     case BatchOp::Compress:
                         DonutInfo::compress(bd);
                         break;
+                    case BatchOp::ExportDonut:
+                        exportDonut(listCursor_);
+                        break;
+                    case BatchOp::ImportDonut:
+                        scanDonutFiles();
+                        if (importFiles_.empty()) {
+                            showMessageAndWait("No Files", "No .donut files found in donuts/ folder.");
+                        } else {
+                            importCursor_ = 0;
+                            importScroll_ = 0;
+                            state_ = UIState::Import;
+                            return;
+                        }
+                        break;
                     case BatchOp::Cancel:
                         break;
                     default: break;
@@ -1553,6 +1630,343 @@ int UI::cycleFlavor(uint64_t current, int direction) {
     int n = DonutInfo::FLAVOR_COUNT;
     idx = ((idx + direction) % n + n) % n;
     return idx;
+}
+
+// --- Export / Import ---
+
+std::string UI::sanitizeFilename(const std::string& input) {
+    std::string out;
+    out.reserve(input.size());
+    for (char c : input) {
+        if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
+            (c >= '0' && c <= '9') || c == '_' || c == '-' || c == '.' || c == ' ')
+            out += c;
+    }
+    // Trim leading/trailing spaces
+    size_t start = out.find_first_not_of(' ');
+    if (start == std::string::npos) return "donut";
+    size_t end = out.find_last_not_of(' ');
+    out = out.substr(start, end - start + 1);
+    // Limit length
+    if (out.size() > 200) out.resize(200);
+    if (out.empty()) out = "donut";
+    return out;
+}
+
+std::string UI::buildDefaultExportName(int index) {
+    Donut9a d = save_.getDonut(index);
+    if (!d.data || d.isEmpty()) return "donut";
+
+    std::string name = DonutInfo::getBerryName(d.berryName());
+    // Replace spaces with underscores
+    for (char& c : name) {
+        if (c == ' ') c = '_';
+    }
+
+    char buf[256];
+    std::snprintf(buf, sizeof(buf), "%s_%dstar", name.c_str(), d.stars());
+    return buf;
+}
+
+std::string UI::showKeyboard(const std::string& defaultText) {
+#ifdef __SWITCH__
+    SwkbdConfig kbd;
+    swkbdCreate(&kbd, 0);
+    swkbdConfigMakePresetDefault(&kbd);
+    swkbdConfigSetHeaderText(&kbd, "Enter filename");
+    swkbdConfigSetInitialText(&kbd, defaultText.c_str());
+    swkbdConfigSetStringLenMax(&kbd, 200);
+
+    char result[256] = {};
+    Result rc = swkbdShow(&kbd, result, sizeof(result));
+    swkbdClose(&kbd);
+
+    if (R_SUCCEEDED(rc) && result[0] != '\0')
+        return std::string(result);
+    return "";
+#else
+    // PC fallback: return default name (no interactive keyboard)
+    return defaultText;
+#endif
+}
+
+bool UI::exportDonut(int index) {
+    Donut9a d = save_.getDonut(index);
+    if (!d.data || d.isEmpty()) {
+        showMessageAndWait("Export Error", "Cannot export an empty donut slot.");
+        return false;
+    }
+
+    // Get filename from user
+    std::string defaultName = buildDefaultExportName(index);
+    std::string filename = showKeyboard(defaultName);
+    if (filename.empty()) return false; // cancelled
+
+    filename = sanitizeFilename(filename);
+
+    // Ensure donuts/ directory exists
+    std::string dir = basePath_ + "donuts/";
+    mkdir(dir.c_str(), 0755);
+
+    std::string path = dir + filename + ".donut";
+
+    // Check if file exists
+    FILE* check = fopen(path.c_str(), "rb");
+    if (check) {
+        fclose(check);
+        if (!showConfirm("Overwrite?", "File already exists: " + filename + ".donut"))
+            return false;
+    }
+
+    // Write the 72 bytes
+    FILE* f = fopen(path.c_str(), "wb");
+    if (!f) {
+        showMessageAndWait("Export Error", "Failed to create file.");
+        return false;
+    }
+    size_t written = fwrite(d.data, 1, Donut9a::SIZE, f);
+    fclose(f);
+
+    if (written != Donut9a::SIZE) {
+        showMessageAndWait("Export Error", "Failed to write donut data.");
+        return false;
+    }
+
+    showMessageAndWait("Exported", "Saved as: " + filename + ".donut");
+    return true;
+}
+
+void UI::scanDonutFiles() {
+    importFiles_.clear();
+
+    std::string dir = basePath_ + "donuts/";
+    mkdir(dir.c_str(), 0755);
+
+    DIR* dp = opendir(dir.c_str());
+    if (!dp) return;
+
+    struct dirent* ep;
+    while ((ep = readdir(dp)) != nullptr) {
+        std::string name = ep->d_name;
+        if (name.size() > 6 && name.substr(name.size() - 6) == ".donut")
+            importFiles_.push_back(name);
+    }
+    closedir(dp);
+
+    std::sort(importFiles_.begin(), importFiles_.end());
+}
+
+bool UI::importDonut(const std::string& filename) {
+    std::string path = basePath_ + "donuts/" + filename;
+
+    FILE* f = fopen(path.c_str(), "rb");
+    if (!f) {
+        showMessageAndWait("Import Error", "Failed to open file.");
+        return false;
+    }
+
+    uint8_t buf[Donut9a::SIZE];
+    size_t nread = fread(buf, 1, Donut9a::SIZE, f);
+    fclose(f);
+
+    if (nread != Donut9a::SIZE) {
+        showMessageAndWait("Import Error", "Invalid file size (expected 72 bytes).");
+        return false;
+    }
+
+    // Validate donut data
+    Donut9a tmp{buf};
+    // Check all 8 berries are valid IDs
+    for (int i = 0; i < 8; i++) {
+        uint16_t b = tmp.berry(i);
+        if (b != 0 && DonutInfo::findBerryByItem(b) < 0) {
+            showMessageAndWait("Import Error", "Invalid berry ID in slot " + std::to_string(i + 1) + ".");
+            return false;
+        }
+    }
+    // Check all 3 flavors are valid hashes
+    for (int i = 0; i < 3; i++) {
+        uint64_t fh = tmp.flavor(i);
+        if (fh != 0 && DonutInfo::findFlavorByHash(fh) < 0) {
+            showMessageAndWait("Import Error", "Invalid flavor hash in slot " + std::to_string(i + 1) + ".");
+            return false;
+        }
+    }
+    // Check stars in range
+    if (tmp.stars() > 5) {
+        showMessageAndWait("Import Error", "Invalid star rating.");
+        return false;
+    }
+
+    Donut9a d = save_.getDonut(listCursor_);
+    if (!d.data) {
+        showMessageAndWait("Import Error", "Invalid donut slot.");
+        return false;
+    }
+
+    std::memcpy(d.data, buf, Donut9a::SIZE);
+    d.applyTimestamp();
+    DonutInfo::recalcStats(d);
+
+    showMessageAndWait("Imported", "Loaded into slot #" + std::to_string(listCursor_ + 1));
+    return true;
+}
+
+void UI::drawImportPanel() {
+    drawRect(0, 0, SCREEN_W, SCREEN_H, {0, 0, 0, 140});
+
+    int mw = 500, mh = 450;
+    int mx = (SCREEN_W - mw) / 2;
+    int my = (SCREEN_H - mh) / 2;
+
+    drawRect(mx, my, mw, mh, COL_BATCH_BG);
+    drawRectOutline(mx, my, mw, mh, COL_CURSOR, 2);
+
+    drawText("Import Donut", mx + 20, my + 14, COL_CURSOR, fontLarge_);
+
+    int listY = my + 55;
+    int listH = mh - 70;
+    int visibleRows = listH / 28;
+    int fileCount = static_cast<int>(importFiles_.size());
+
+    for (int row = 0; row < visibleRows; row++) {
+        int idx = importScroll_ + row;
+        if (idx >= fileCount) break;
+
+        int oy = listY + row * 28;
+        bool sel = (idx == importCursor_);
+
+        if (sel)
+            drawRect(mx + 10, oy - 2, mw - 20, 26, COL_EDIT_FIELD);
+
+        if (sel)
+            drawText(">", mx + 14, oy + 2, COL_CURSOR, font_);
+
+        // Show filename without .donut extension
+        std::string display = importFiles_[idx];
+        if (display.size() > 6)
+            display = display.substr(0, display.size() - 6);
+        drawText(display, mx + 35, oy + 2, sel ? COL_TEXT : COL_TEXT_DIM, font_);
+    }
+
+    // Scroll indicators
+    if (importScroll_ > 0)
+        drawText("\xe2\x96\xb2", mx + mw - 25, listY, COL_ACCENT, fontSmall_);
+    if (importScroll_ + visibleRows < fileCount)
+        drawText("\xe2\x96\xbc", mx + mw - 25, listY + listH - 18, COL_ACCENT, fontSmall_);
+}
+
+void UI::handleImportInput(int button) {
+    int fileCount = static_cast<int>(importFiles_.size());
+    if (fileCount == 0) {
+        if (button == SDL_CONTROLLER_BUTTON_A || button == SDL_CONTROLLER_BUTTON_B)
+            state_ = UIState::List;
+        return;
+    }
+
+    int mh = 450;
+    int listH = mh - 70;
+    int visibleRows = listH / 28;
+
+    switch (button) {
+        case SDL_CONTROLLER_BUTTON_DPAD_UP:
+            if (importCursor_ > 0) {
+                importCursor_--;
+                if (importCursor_ < importScroll_)
+                    importScroll_ = importCursor_;
+            }
+            break;
+
+        case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
+            if (importCursor_ < fileCount - 1) {
+                importCursor_++;
+                if (importCursor_ >= importScroll_ + visibleRows)
+                    importScroll_ = importCursor_ - visibleRows + 1;
+            }
+            break;
+
+        case SDL_CONTROLLER_BUTTON_B: // Switch A = confirm
+            if (importCursor_ >= 0 && importCursor_ < fileCount) {
+                importDonut(importFiles_[importCursor_]);
+            }
+            state_ = UIState::List;
+            break;
+
+        case SDL_CONTROLLER_BUTTON_A: // Switch B = cancel
+            state_ = UIState::List;
+            break;
+    }
+}
+
+// --- Exit Menu ---
+
+static const char* EXIT_LABELS[] = {
+    "Save & Quit",
+    "Save & Back to Profiles",
+    "Quit without Saving",
+    "Cancel",
+};
+
+void UI::drawExitMenu() {
+    drawRect(0, 0, SCREEN_W, SCREEN_H, {0, 0, 0, 140});
+
+    int mw = 380, mh = 215;
+    int mx = (SCREEN_W - mw) / 2;
+    int my = (SCREEN_H - mh) / 2;
+
+    drawRect(mx, my, mw, mh, COL_BATCH_BG);
+    drawRectOutline(mx, my, mw, mh, COL_CURSOR, 2);
+
+    drawText("Exit", mx + 20, my + 14, COL_CURSOR, fontLarge_);
+
+    int opCount = static_cast<int>(ExitOp::COUNT);
+    for (int i = 0; i < opCount; i++) {
+        int oy = my + 55 + i * 34;
+        bool sel = (i == exitCursor_);
+
+        if (sel)
+            drawRect(mx + 10, oy - 2, mw - 20, 30, COL_EDIT_FIELD);
+        if (sel)
+            drawText(">", mx + 14, oy + 2, COL_CURSOR, font_);
+        drawText(EXIT_LABELS[i], mx + 35, oy + 2, sel ? COL_TEXT : COL_TEXT_DIM, font_);
+    }
+}
+
+void UI::handleExitMenuInput(int button, bool& running) {
+    int opCount = static_cast<int>(ExitOp::COUNT);
+
+    switch (button) {
+        case SDL_CONTROLLER_BUTTON_DPAD_UP:
+            if (exitCursor_ > 0) exitCursor_--;
+            break;
+
+        case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
+            if (exitCursor_ < opCount - 1) exitCursor_++;
+            break;
+
+        case SDL_CONTROLLER_BUTTON_B: { // Switch A = confirm
+            auto op = static_cast<ExitOp>(exitCursor_);
+            if (op == ExitOp::SaveAndQuit) {
+                saveNow_ = true;
+                running = false;
+            } else if (op == ExitOp::SaveAndBack) {
+                showWorking("Saving...");
+                if (save_.isLoaded())
+                    save_.save(savePath_);
+                account_.commitSave();
+                account_.unmountSave();
+                screen_ = AppScreen::ProfileSelector;
+            } else if (op == ExitOp::QuitWithoutSaving) {
+                running = false;
+            }
+            state_ = UIState::List;
+            break;
+        }
+
+        case SDL_CONTROLLER_BUTTON_A: // Switch B = cancel
+            state_ = UIState::List;
+            break;
+    }
 }
 
 int UI::totalPages() {
