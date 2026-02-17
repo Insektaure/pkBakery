@@ -25,6 +25,8 @@ If you need to restore a backup, use a save manager such as [Checkpoint](https:/
 - Reads and writes Pokemon Legends: Z-A save files using SCBlock encryption (SwishCrypto)
 - Account-based profile selector — pick which Switch user's save to edit
 - Automatic save backup before any modification (`backups/<profile>/<timestamp>/`)
+- Pre-backup storage check — warns if SD card free space is low and lets you continue without backup
+- Graceful backup failure handling — prompts to continue or abort if backup fails
 - In-place file writing (`r+b`) to avoid Switch filesystem journal corruption
 - Round-trip verification after load (encrypt(decrypt(file)) == file)
 - Donut data accessed via SCBlock key `0xBE007476`
