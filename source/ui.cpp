@@ -7,10 +7,19 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <algorithm>
+#include <sys/statvfs.h>
 
 #ifdef __SWITCH__
 #include <switch.h>
 #endif
+
+namespace {
+std::string formatSize(size_t bytes) {
+    if (bytes >= 1024 * 1024)
+        return std::to_string(bytes / (1024 * 1024)) + " MB";
+    return std::to_string(bytes / 1024) + " KB";
+}
+} // namespace
 
 // --- Init / Shutdown ---
 
@@ -601,9 +610,38 @@ void UI::selectProfile(int index) {
     }
     savePath_ = mountPath + saveFileNameOf(GameType::ZA);
 
-    // Backup save files
-    std::string backupDir = buildBackupDir();
-    AccountManager::backupSaveDir(mountPath, backupDir);
+    // Check space and backup save files
+    bool doBackup = true;
+
+#ifdef __SWITCH__
+    size_t saveSize = AccountManager::calculateDirSize(mountPath);
+    struct statvfs vfs;
+    if (statvfs("sdmc:/", &vfs) == 0) {
+        size_t freeSpace = (size_t)vfs.f_bavail * vfs.f_bsize;
+        if (freeSpace < saveSize * 2) {
+            std::string msg = "Free: " + formatSize(freeSpace) +
+                ", Need: " + formatSize(saveSize) +
+                ".  Continue without backup?";
+            if (!showConfirm("Low Storage", msg)) {
+                account_.unmountSave();
+                return;
+            }
+            doBackup = false;
+        }
+    }
+#endif
+
+    if (doBackup) {
+        std::string backupDir = buildBackupDir();
+        bool ok = AccountManager::backupSaveDir(mountPath, backupDir);
+        if (!ok) {
+            if (!showConfirm("Backup Failed",
+                    "Could not back up save data.\nContinue without backup?")) {
+                account_.unmountSave();
+                return;
+            }
+        }
+    }
 
     // Load save
     save_.setGameType(GameType::ZA);

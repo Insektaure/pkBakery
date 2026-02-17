@@ -226,6 +226,32 @@ bool AccountManager::backupSaveDir(const std::string& srcDir, const std::string&
     return ok;
 }
 
+size_t AccountManager::calculateDirSize(const std::string& dirPath) {
+    DIR* dir = opendir(dirPath.c_str());
+    if (!dir)
+        return 0;
+
+    size_t total = 0;
+    struct dirent* entry;
+    while ((entry = readdir(dir)) != nullptr) {
+        if (entry->d_name[0] == '.')
+            continue;
+
+        std::string path = dirPath + entry->d_name;
+        struct stat st;
+        if (stat(path.c_str(), &st) != 0)
+            continue;
+
+        if (S_ISDIR(st.st_mode))
+            total += calculateDirSize(path + "/");
+        else
+            total += st.st_size;
+    }
+
+    closedir(dir);
+    return total;
+}
+
 void AccountManager::freeTextures() {
     for (auto& user : users_) {
         if (user.iconTexture) {
