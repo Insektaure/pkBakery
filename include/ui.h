@@ -155,6 +155,16 @@ private:
     SDL_Texture* getDonutSprite(uint16_t spriteId, uint8_t stars);
     void freeSprites();
 
+    // Text texture cache
+    struct CachedText {
+        SDL_Texture* texture;
+        int w, h;
+    };
+    std::unordered_map<uint64_t, CachedText> textCache_;
+    static uint64_t textCacheKey(const std::string& text, TTF_Font* f, SDL_Color c);
+    const CachedText& getTextTexture(const std::string& text, TTF_Font* f, SDL_Color c);
+    void clearTextCache();
+
     // Redraws the current screen (used as background for popup overlays)
     void drawCurrentFrame();
 

@@ -60,6 +60,45 @@ void UI::freeSprites() {
     spriteCache_.clear();
 }
 
+// --- Text Texture Cache ---
+
+uint64_t UI::textCacheKey(const std::string& text, TTF_Font* f, SDL_Color c) {
+    uint64_t h = 14695981039346656037ULL;
+    for (char ch : text) {
+        h ^= static_cast<uint8_t>(ch);
+        h *= 1099511628211ULL;
+    }
+    h ^= reinterpret_cast<uintptr_t>(f) * 2654435761ULL;
+    uint32_t color32 = (c.r << 24) | (c.g << 16) | (c.b << 8) | c.a;
+    h ^= static_cast<uint64_t>(color32) * 2246822519ULL;
+    return h;
+}
+
+const UI::CachedText& UI::getTextTexture(const std::string& text, TTF_Font* f, SDL_Color c) {
+    uint64_t key = textCacheKey(text, f, c);
+    auto it = textCache_.find(key);
+    if (it != textCache_.end())
+        return it->second;
+
+    SDL_Surface* surf = TTF_RenderUTF8_Blended(f, text.c_str(), c);
+    SDL_Texture* tex = surf ? SDL_CreateTextureFromSurface(renderer_, surf) : nullptr;
+    int w = surf ? surf->w : 0;
+    int h = surf ? surf->h : 0;
+    if (surf) SDL_FreeSurface(surf);
+
+    auto& entry = textCache_[key];
+    entry = {tex, w, h};
+    return entry;
+}
+
+void UI::clearTextCache() {
+    for (auto& [key, entry] : textCache_) {
+        if (entry.texture)
+            SDL_DestroyTexture(entry.texture);
+    }
+    textCache_.clear();
+}
+
 // --- Drawing Primitives ---
 
 void UI::drawRect(int x, int y, int w, int h, SDL_Color c) {
@@ -79,32 +118,27 @@ void UI::drawRectOutline(int x, int y, int w, int h, SDL_Color c, int t) {
 void UI::drawText(const std::string& text, int x, int y, SDL_Color c, TTF_Font* f) {
     if (!f) f = font_;
     if (!f || text.empty()) return;
-    SDL_Surface* surf = TTF_RenderUTF8_Blended(f, text.c_str(), c);
-    if (!surf) return;
-    SDL_Texture* tex = SDL_CreateTextureFromSurface(renderer_, surf);
-    SDL_Rect dst = {x, y, surf->w, surf->h};
-    SDL_RenderCopy(renderer_, tex, nullptr, &dst);
-    SDL_DestroyTexture(tex);
-    SDL_FreeSurface(surf);
+    const auto& cached = getTextTexture(text, f, c);
+    if (!cached.texture) return;
+    SDL_Rect dst = {x, y, cached.w, cached.h};
+    SDL_RenderCopy(renderer_, cached.texture, nullptr, &dst);
 }
 
 void UI::drawTextCentered(const std::string& text, int cx, int cy, SDL_Color color, TTF_Font* f) {
     if (!f || text.empty()) return;
-    SDL_Surface* surf = TTF_RenderUTF8_Blended(f, text.c_str(), color);
-    if (!surf) return;
-    SDL_Texture* tex = SDL_CreateTextureFromSurface(renderer_, surf);
-    SDL_Rect dst = {cx - surf->w / 2, cy - surf->h / 2, surf->w, surf->h};
-    SDL_RenderCopy(renderer_, tex, nullptr, &dst);
-    SDL_DestroyTexture(tex);
-    SDL_FreeSurface(surf);
+    const auto& cached = getTextTexture(text, f, color);
+    if (!cached.texture) return;
+    SDL_Rect dst = {cx - cached.w / 2, cy - cached.h / 2, cached.w, cached.h};
+    SDL_RenderCopy(renderer_, cached.texture, nullptr, &dst);
 }
 
 void UI::drawTextRight(const std::string& text, int x, int y, SDL_Color c, TTF_Font* f) {
     if (!f) f = font_;
     if (!f || text.empty()) return;
-    int tw, th;
-    TTF_SizeUTF8(f, text.c_str(), &tw, &th);
-    drawText(text, x - tw, y, c, f);
+    const auto& cached = getTextTexture(text, f, c);
+    if (!cached.texture) return;
+    SDL_Rect dst = {x - cached.w, y, cached.w, cached.h};
+    SDL_RenderCopy(renderer_, cached.texture, nullptr, &dst);
 }
 
 void UI::drawStatusBar(const std::string& msg) {

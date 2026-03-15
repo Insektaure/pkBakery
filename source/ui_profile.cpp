@@ -224,6 +224,7 @@ void UI::selectProfile(int index) {
     editField_ = 0;
     batchCursor_ = 0;
     state_ = UIState::List;
+    clearTextCache();
 
     screen_ = AppScreen::MainView;
 }

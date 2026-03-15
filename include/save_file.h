@@ -15,7 +15,8 @@ public:
     bool save(const std::string& path);
 
     Donut9a getDonut(int index);
-    int donutCount() const;
+    int donutCount();
+    void invalidateDonutCount();
     uint8_t* donutBlockData() { return donutData_; }
 
     bool isLoaded() const { return loaded_; }
@@ -31,6 +32,7 @@ private:
     bool loaded_ = false;
 
     GameType gameType_ = GameType::ZA;
+    mutable int cachedDonutCount_ = -1;
 
     // Block key for donuts from SaveBlockAccessor9ZA.cs
     static constexpr uint32_t KDONUTS = 0xBE007476;

@@ -94,6 +94,7 @@ void UI::handleDonutInput(bool& running) {
             if (button == SDL_CONTROLLER_BUTTON_START) { saveNow_ = true; running = false; }
             if (button == SDL_CONTROLLER_BUTTON_BACK)  { showAbout_ = true; }
             if (button == SDL_CONTROLLER_BUTTON_A) { // Switch B = back
+                clearTextCache();
                 account_.unmountSave();
                 screen_ = AppScreen::ProfileSelector;
             }
@@ -255,6 +256,7 @@ void UI::handleListInput(int button, bool& running) {
                 d.setFlavor(0, 0xD373B22CEF7A33C9ULL); // Sparkling Power: All Types (Lv. 3)
                 d.setFlavor(1, 0xCCFCB99681D31E8BULL); // Alpha Power (Lv. 3)
                 d.setFlavor(2, 0);
+                save_.invalidateDonutCount();
             }
             editField_ = 0;
             state_ = UIState::Edit;
@@ -263,8 +265,10 @@ void UI::handleListInput(int button, bool& running) {
 
         case SDL_CONTROLLER_BUTTON_Y: { // Switch X = delete
             Donut9a d = save_.getDonut(listCursor_);
-            if (d.data)
+            if (d.data) {
                 d.clear();
+                save_.invalidateDonutCount();
+            }
             break;
         }
 
@@ -285,6 +289,7 @@ void UI::handleListInput(int button, bool& running) {
         case SDL_CONTROLLER_BUTTON_A: // Switch B = back to profile selector
             if (showConfirm("Go Back?", "Unsaved changes will be lost.")) {
                 clearMultiSelect();
+                clearTextCache();
                 account_.unmountSave();
                 screen_ = AppScreen::ProfileSelector;
             }
@@ -338,6 +343,7 @@ void UI::handleEditInput(int button) {
                               multiSelectCount_, multiSelectCount_ > 1 ? "s" : "");
                 if (showConfirm("Apply to Selected", msg)) {
                     applyToMultiSelected(listCursor_);
+                    save_.invalidateDonutCount();
                 }
                 clearMultiSelect();
             }
@@ -460,6 +466,7 @@ void UI::handleBatchInput(int button) {
                     default: break;
                 }
             }
+            save_.invalidateDonutCount();
             state_ = UIState::List;
             break;
         }
@@ -549,6 +556,7 @@ void UI::handleImportInput(int button) {
         case SDL_CONTROLLER_BUTTON_B: // Switch A = confirm
             if (importCursor_ >= 0 && importCursor_ < fileCount) {
                 importDonut(importFiles_[importCursor_]);
+                save_.invalidateDonutCount();
             }
             state_ = UIState::List;
             break;
@@ -605,6 +613,7 @@ void UI::handleExitMenuInput(int button, bool& running) {
                     save_.save(savePath_);
                 account_.commitSave();
                 ledOff();
+                clearTextCache();
                 account_.unmountSave();
                 screen_ = AppScreen::ProfileSelector;
             } else if (op == ExitOp::QuitWithoutSaving) {

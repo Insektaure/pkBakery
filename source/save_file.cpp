@@ -93,9 +93,11 @@ Donut9a SaveFile::getDonut(int index) {
     return d;
 }
 
-int SaveFile::donutCount() const {
+int SaveFile::donutCount() {
     if (!donutData_)
         return 0;
+    if (cachedDonutCount_ >= 0)
+        return cachedDonutCount_;
     int count = 0;
     for (int i = 0; i < Donut9a::MAX_COUNT; i++) {
         uint64_t ts;
@@ -103,5 +105,10 @@ int SaveFile::donutCount() const {
         if (ts != 0)
             count++;
     }
+    cachedDonutCount_ = count;
     return count;
+}
+
+void SaveFile::invalidateDonutCount() {
+    cachedDonutCount_ = -1;
 }

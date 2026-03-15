@@ -84,6 +84,7 @@ bool UI::init() {
 }
 
 void UI::shutdown() {
+    clearTextCache();
     freeSprites();
     account_.freeTextures();
     if (fontLarge_) TTF_CloseFont(fontLarge_);
