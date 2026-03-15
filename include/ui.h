@@ -116,6 +116,16 @@ private:
     int editField_   = 0;
     int batchCursor_ = 0;
 
+    // Multi-select state
+    bool multiSelected_[Donut9a::MAX_COUNT] = {};
+    int multiSelectCount_ = 0;
+    bool zlWasPressed_ = false;
+    bool zrWasPressed_ = false;
+    bool zrHeld_ = false;
+    void toggleMultiSelect(int idx);
+    void clearMultiSelect();
+    void applyToMultiSelected(int sourceIdx);
+
     // Import file picker state
     std::vector<std::string> importFiles_;
     int importCursor_ = 0;

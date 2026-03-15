@@ -1,4 +1,5 @@
 #include "ui.h"
+#include "led.h"
 #include <cstdio>
 #include <cstring>
 #include <ctime>
@@ -69,7 +70,7 @@ void UI::drawProfileSelectorFrame() {
         drawTextCentered(name, cardX + CARD_W / 2, cardY + ICON_SIZE + 24, COL_TEXT, fontSmall_);
     }
 
-    drawStatusBar("A:Select  -:About  +:Quit");
+    drawStatusBar("A: Select  -: About  +: Quit");
 }
 
 void UI::handleProfileSelectorInput(bool& running) {
@@ -192,7 +193,9 @@ void UI::selectProfile(int index) {
 
     if (doBackup) {
         std::string backupDir = buildBackupDir();
+        ledBlink();
         bool ok = AccountManager::backupSaveDir(mountPath, backupDir);
+        ledOff();
         if (!ok) {
             if (!showConfirm("Backup Failed",
                     "Could not back up save data.\nContinue without backup?")) {

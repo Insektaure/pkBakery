@@ -1,4 +1,5 @@
 #include "ui.h"
+#include "led.h"
 #include <cstdio>
 #include <cstring>
 #include <algorithm>
@@ -19,6 +20,21 @@ void UI::handleDonutInput(bool& running) {
                 int16_t lx = SDL_GameControllerGetAxis(pad_, SDL_CONTROLLER_AXIS_LEFTX);
                 int16_t ly = SDL_GameControllerGetAxis(pad_, SDL_CONTROLLER_AXIS_LEFTY);
                 updateStick(lx, ly);
+            }
+            // ZR trigger: toggle multi-select on current slot
+            if (event.caxis.axis == SDL_CONTROLLER_AXIS_TRIGGERRIGHT) {
+                bool pressed = event.caxis.value > 16000;
+                if (pressed && !zrWasPressed_ && state_ == UIState::List && save_.hasDonutBlock())
+                    toggleMultiSelect(listCursor_);
+                zrWasPressed_ = pressed;
+                zrHeld_ = pressed;
+            }
+            // ZL trigger: clear all multi-selections
+            if (event.caxis.axis == SDL_CONTROLLER_AXIS_TRIGGERLEFT) {
+                bool pressed = event.caxis.value > 16000;
+                if (pressed && !zlWasPressed_ && state_ == UIState::List && save_.hasDonutBlock())
+                    clearMultiSelect();
+                zlWasPressed_ = pressed;
             }
             continue;
         }
@@ -47,11 +63,15 @@ void UI::handleDonutInput(bool& running) {
                 case SDLK_e:      button = SDL_CONTROLLER_BUTTON_RIGHTSHOULDER; break;
                 case SDLK_PLUS:   button = SDL_CONTROLLER_BUTTON_START; break;
                 case SDLK_MINUS:  button = SDL_CONTROLLER_BUTTON_BACK; break;
+                case SDLK_c:      button = 100; zrHeld_ = true; break; // ZR = toggle multi-select
+                case SDLK_z:      button = 101; break; // ZL = clear multi-select
                 default: break;
             }
         }
 
         if (event.type == SDL_CONTROLLERBUTTONUP || event.type == SDL_KEYUP) {
+            if (event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_c)
+                zrHeld_ = false;
             clearRepeat();
             continue;
         }
@@ -175,34 +195,54 @@ void UI::handleListInput(int button, bool& running) {
     switch (button) {
         case SDL_CONTROLLER_BUTTON_DPAD_UP:
             if (listCursor_ > 0) {
+                if (zrHeld_ && !multiSelected_[listCursor_])
+                    toggleMultiSelect(listCursor_);
                 listCursor_--;
                 if (listCursor_ < listScroll_)
                     listScroll_ = listCursor_;
+                if (zrHeld_ && !multiSelected_[listCursor_])
+                    toggleMultiSelect(listCursor_);
             }
             break;
 
         case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
             if (listCursor_ < Donut9a::MAX_COUNT - 1) {
+                if (zrHeld_ && !multiSelected_[listCursor_])
+                    toggleMultiSelect(listCursor_);
                 listCursor_++;
                 if (listCursor_ >= listScroll_ + visibleRows)
                     listScroll_ = listCursor_ - visibleRows + 1;
+                if (zrHeld_ && !multiSelected_[listCursor_])
+                    toggleMultiSelect(listCursor_);
             }
             break;
 
         case SDL_CONTROLLER_BUTTON_LEFTSHOULDER: {
+            int oldCursor = listCursor_;
             listCursor_ -= visibleRows;
             if (listCursor_ < 0) listCursor_ = 0;
             listScroll_ -= visibleRows;
             if (listScroll_ < 0) listScroll_ = 0;
+            if (zrHeld_) {
+                int lo = listCursor_, hi = oldCursor;
+                for (int i = lo; i <= hi; i++)
+                    if (!multiSelected_[i]) toggleMultiSelect(i);
+            }
             break;
         }
         case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER: {
+            int oldCursor = listCursor_;
             listCursor_ += visibleRows;
             if (listCursor_ >= Donut9a::MAX_COUNT) listCursor_ = Donut9a::MAX_COUNT - 1;
             listScroll_ += visibleRows;
             int maxScroll = Donut9a::MAX_COUNT - visibleRows;
             if (maxScroll < 0) maxScroll = 0;
             if (listScroll_ > maxScroll) listScroll_ = maxScroll;
+            if (zrHeld_) {
+                int lo = oldCursor, hi = listCursor_;
+                for (int i = lo; i <= hi; i++)
+                    if (!multiSelected_[i]) toggleMultiSelect(i);
+            }
             break;
         }
 
@@ -244,9 +284,18 @@ void UI::handleListInput(int button, bool& running) {
 
         case SDL_CONTROLLER_BUTTON_A: // Switch B = back to profile selector
             if (showConfirm("Go Back?", "Unsaved changes will be lost.")) {
+                clearMultiSelect();
                 account_.unmountSave();
                 screen_ = AppScreen::ProfileSelector;
             }
+            break;
+
+        case 100: // ZR = toggle multi-select
+            toggleMultiSelect(listCursor_);
+            break;
+
+        case 101: // ZL = clear multi-select
+            clearMultiSelect();
             break;
     }
 }
@@ -282,9 +331,19 @@ void UI::handleEditInput(int button) {
             break;
 
         case SDL_CONTROLLER_BUTTON_B: // Switch A = confirm
-        case SDL_CONTROLLER_BUTTON_A: // Switch B = cancel
+        case SDL_CONTROLLER_BUTTON_A: { // Switch B = cancel
+            if (multiSelectCount_ > 0) {
+                char msg[64];
+                std::snprintf(msg, sizeof(msg), "Copy this donut to %d selected slot%s?",
+                              multiSelectCount_, multiSelectCount_ > 1 ? "s" : "");
+                if (showConfirm("Apply to Selected", msg)) {
+                    applyToMultiSelected(listCursor_);
+                }
+                clearMultiSelect();
+            }
             state_ = UIState::List;
             break;
+        }
     }
 }
 
@@ -308,18 +367,48 @@ void UI::handleBatchInput(int button) {
             if (bd) {
                 switch (op) {
                     case BatchOp::OneShiny: {
-                        Donut9a d = save_.getDonut(listCursor_);
-                        if (d.data) DonutInfo::fillOneShiny(d);
+                        if (multiSelectCount_ > 0) {
+                            for (int i = 0; i < Donut9a::MAX_COUNT; i++) {
+                                if (multiSelected_[i]) {
+                                    Donut9a d = save_.getDonut(i);
+                                    if (d.data) DonutInfo::fillOneShiny(d);
+                                }
+                            }
+                            clearMultiSelect();
+                        } else {
+                            Donut9a d = save_.getDonut(listCursor_);
+                            if (d.data) DonutInfo::fillOneShiny(d);
+                        }
                         break;
                     }
                     case BatchOp::OneShinyRandom: {
-                        Donut9a d = save_.getDonut(listCursor_);
-                        if (d.data) DonutInfo::fillOneShinyRandom(d);
+                        if (multiSelectCount_ > 0) {
+                            for (int i = 0; i < Donut9a::MAX_COUNT; i++) {
+                                if (multiSelected_[i]) {
+                                    Donut9a d = save_.getDonut(i);
+                                    if (d.data) DonutInfo::fillOneShinyRandom(d);
+                                }
+                            }
+                            clearMultiSelect();
+                        } else {
+                            Donut9a d = save_.getDonut(listCursor_);
+                            if (d.data) DonutInfo::fillOneShinyRandom(d);
+                        }
                         break;
                     }
                     case BatchOp::OneRandomLv3: {
-                        Donut9a d = save_.getDonut(listCursor_);
-                        if (d.data) DonutInfo::fillOneRandomLv3(d);
+                        if (multiSelectCount_ > 0) {
+                            for (int i = 0; i < Donut9a::MAX_COUNT; i++) {
+                                if (multiSelected_[i]) {
+                                    Donut9a d = save_.getDonut(i);
+                                    if (d.data) DonutInfo::fillOneRandomLv3(d);
+                                }
+                            }
+                            clearMultiSelect();
+                        } else {
+                            Donut9a d = save_.getDonut(listCursor_);
+                            if (d.data) DonutInfo::fillOneRandomLv3(d);
+                        }
                         break;
                     }
                     case BatchOp::FillShiny:
@@ -332,8 +421,18 @@ void UI::handleBatchInput(int button) {
                         DonutInfo::cloneToAll(bd, listCursor_);
                         break;
                     case BatchOp::DeleteSelected: {
-                        Donut9a d = save_.getDonut(listCursor_);
-                        if (d.data) d.clear();
+                        if (multiSelectCount_ > 0) {
+                            for (int i = 0; i < Donut9a::MAX_COUNT; i++) {
+                                if (multiSelected_[i]) {
+                                    Donut9a d = save_.getDonut(i);
+                                    if (d.data) d.clear();
+                                }
+                            }
+                            clearMultiSelect();
+                        } else {
+                            Donut9a d = save_.getDonut(listCursor_);
+                            if (d.data) d.clear();
+                        }
                         break;
                     }
                     case BatchOp::DeleteAll:
@@ -501,9 +600,11 @@ void UI::handleExitMenuInput(int button, bool& running) {
                 running = false;
             } else if (op == ExitOp::SaveAndBack) {
                 showWorking("Saving...");
+                ledBlink();
                 if (save_.isLoaded())
                     save_.save(savePath_);
                 account_.commitSave();
+                ledOff();
                 account_.unmountSave();
                 screen_ = AppScreen::ProfileSelector;
             } else if (op == ExitOp::QuitWithoutSaving) {
@@ -516,6 +617,32 @@ void UI::handleExitMenuInput(int button, bool& running) {
         case SDL_CONTROLLER_BUTTON_A: // Switch B = cancel
             state_ = UIState::List;
             break;
+    }
+}
+
+// --- Multi-Select Helpers ---
+
+void UI::toggleMultiSelect(int idx) {
+    if (idx < 0 || idx >= Donut9a::MAX_COUNT) return;
+    multiSelected_[idx] = !multiSelected_[idx];
+    multiSelectCount_ += multiSelected_[idx] ? 1 : -1;
+}
+
+void UI::clearMultiSelect() {
+    std::memset(multiSelected_, 0, sizeof(multiSelected_));
+    multiSelectCount_ = 0;
+}
+
+void UI::applyToMultiSelected(int sourceIdx) {
+    Donut9a src = save_.getDonut(sourceIdx);
+    if (!src.data || src.isEmpty()) return;
+    for (int i = 0; i < Donut9a::MAX_COUNT; i++) {
+        if (!multiSelected_[i] || i == sourceIdx) continue;
+        Donut9a dst = save_.getDonut(i);
+        if (dst.data) {
+            src.copyTo(dst);
+            dst.applyTimestamp(i);
+        }
     }
 }
 

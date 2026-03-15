@@ -1,4 +1,5 @@
 #include "ui.h"
+#include "led.h"
 
 #ifdef __SWITCH__
 #include <switch.h>
@@ -27,6 +28,8 @@ int main(int argc, char* argv[]) {
 #else
     basePath = "./";
 #endif
+
+    ledInitWithPath(basePath.c_str());
 
     std::string savePath = basePath + "main";
 
@@ -59,6 +62,7 @@ int main(int argc, char* argv[]) {
 
     // Cleanup
     ui.shutdown();
+    ledExit();
 
 #ifdef __SWITCH__
     romfsExit();

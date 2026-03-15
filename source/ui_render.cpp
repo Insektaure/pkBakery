@@ -240,36 +240,56 @@ void UI::drawDonutHeader() {
 
     if (save_.hasDonutBlock()) {
         int count = save_.donutCount();
-        char buf[64];
-        std::snprintf(buf, sizeof(buf), "%d / %d donuts   Page %d/%d",
-                      count, Donut9a::MAX_COUNT, currentPage() + 1, totalPages());
-        drawTextRight(buf, SCREEN_W - 20, 14, COL_TEXT_DIM, font_);
+        char buf[96];
+        if (multiSelectCount_ > 0)
+            std::snprintf(buf, sizeof(buf), "%d / %d donuts   Page %d/%d   [%d selected]",
+                          count, Donut9a::MAX_COUNT, currentPage() + 1, totalPages(), multiSelectCount_);
+        else
+            std::snprintf(buf, sizeof(buf), "%d / %d donuts   Page %d/%d",
+                          count, Donut9a::MAX_COUNT, currentPage() + 1, totalPages());
+        drawTextRight(buf, SCREEN_W - 20, 14, multiSelectCount_ > 0 ? COL_ACCENT : COL_TEXT_DIM, font_);
     }
+
 }
 
 // --- Donut Editor: Status Bar ---
 
 void UI::drawDonutStatusBar() {
     drawRect(0, SCREEN_H - STATUS_H, SCREEN_W, STATUS_H, COL_STATUS_BG);
+    std::string statusMsg;
     const char* msg = "";
     switch (state_) {
         case UIState::List:
-            msg = "DPad:Move  L/R:Page  A:Edit  X:Delete  Y:Batch  +:Exit  -:About  B:Back";
+            if (multiSelectCount_ > 0) {
+                char buf[128];
+                std::snprintf(buf, sizeof(buf),
+                    "ZR: Select  ZL: Clear (%d selected)  A: Edit+Apply  X: Del  Y: Batch  +: Exit",
+                    multiSelectCount_);
+                statusMsg = buf;
+                msg = statusMsg.c_str();
+            } else {
+                msg = "DPad: Move  L/R: Page  A: Edit  X: Delete  Y: Batch  ZR: Select  +: Exit  -: About";
+            }
             break;
         case UIState::Edit:
-            msg = "DPad U/D:Field  L/R:Value  L1/R1:x10  A:Confirm  B:Cancel";
+            msg = "DPad U/D: Field  L/R: Value  L1/R1: x10  A: Confirm  B: Cancel";
             break;
         case UIState::Batch:
-            msg = "DPad U/D:Select  A:Confirm  B:Cancel";
+            msg = "DPad U/D: Select  A: Confirm  B: Cancel";
             break;
         case UIState::Import:
-            msg = "DPad U/D:Select  A:Import  X:Delete  B:Cancel";
+            msg = "DPad U/D: Select  A: Import  X: Delete  B: Cancel";
             break;
         case UIState::ExitMenu:
-            msg = "DPad U/D:Select  A:Confirm  B:Cancel";
+            msg = "DPad U/D: Select  A: Confirm  B: Cancel";
             break;
     }
     drawText(msg, 15, SCREEN_H - STATUS_H + 8, COL_STATUS, fontSmall_);
+
+    if (selectedProfile_ >= 0 && selectedProfile_ < account_.profileCount()) {
+        const std::string& name = account_.profiles()[selectedProfile_].nickname;
+        drawTextRight(name, SCREEN_W - 20, SCREEN_H - STATUS_H + 8, COL_CURSOR, fontSmall_);
+    }
 }
 
 // --- Donut Editor: List Panel ---
@@ -296,15 +316,22 @@ void UI::drawListPanel() {
 
         int ry = startY + row * ROW_H;
         Donut9a d = save_.getDonut(idx);
-        bool selected = (idx == listCursor_);
+        bool isCursor = (idx == listCursor_);
+        bool isMultiSel = multiSelected_[idx];
 
-        if (selected)
+        if (isCursor && isMultiSel)
+            drawRect(LIST_X + 2, ry, LIST_W - 4, ROW_H - 1, {110, 75, 30, 255});
+        else if (isCursor)
             drawRect(LIST_X + 2, ry, LIST_W - 4, ROW_H - 1, COL_ROW_SEL);
+        else if (isMultiSel)
+            drawRect(LIST_X + 2, ry, LIST_W - 4, ROW_H - 1, {80, 55, 25, 255});
         else if (row % 2 == 1)
             drawRect(LIST_X + 2, ry, LIST_W - 4, ROW_H - 1, COL_ROW_HOVER);
 
-        if (selected)
+        if (isCursor)
             drawText(">", LIST_X + 6, ry + 6, COL_CURSOR, fontSmall_);
+        else if (isMultiSel)
+            drawText("*", LIST_X + 6, ry + 6, COL_ACCENT, fontSmall_);
 
         if (d.data && !d.isEmpty()) {
             char ibuf[8];
@@ -333,7 +360,7 @@ void UI::drawListPanel() {
             std::snprintf(fbuf, sizeof(fbuf), "%d", d.flavorCount());
             drawText(fbuf, LIST_X + 370, ry + 6, COL_ACCENT, fontSmall_);
         } else {
-            SDL_Color emptyCol = selected ? COL_TEXT_DIM : COL_EMPTY;
+            SDL_Color emptyCol = isCursor ? COL_TEXT_DIM : isMultiSel ? COL_TEXT_DIM : COL_EMPTY;
             char ibuf[8];
             std::snprintf(ibuf, sizeof(ibuf), "%3d", idx + 1);
             drawText(ibuf, LIST_X + 18, ry + 6, emptyCol, fontSmall_);
@@ -470,7 +497,10 @@ void UI::drawEditPanel() {
         SDL_RenderCopy(renderer_, sprite, nullptr, &dst);
     }
 
-    std::snprintf(buf, sizeof(buf), "Editing Donut #%d", listCursor_ + 1);
+    if (multiSelectCount_ > 0)
+        std::snprintf(buf, sizeof(buf), "Editing Donut #%d  -> %d slots", listCursor_ + 1, multiSelectCount_);
+    else
+        std::snprintf(buf, sizeof(buf), "Editing Donut #%d", listCursor_ + 1);
     drawText(buf, px + 20, y, COL_CURSOR, fontLarge_);
     y += 32;
 

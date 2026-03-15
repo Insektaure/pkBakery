@@ -1,4 +1,5 @@
 #include "ui.h"
+#include "led.h"
 #include <cstdio>
 #include <cstring>
 #include <cmath>
@@ -399,9 +400,11 @@ void UI::run(const std::string& basePath, const std::string& savePath) {
             handleDonutInput(running);
             if (saveNow_) {
                 showWorking("Saving...");
+                ledBlink();
                 if (save_.isLoaded())
                     save_.save(savePath_);
                 account_.commitSave();
+                ledOff();
                 saveNow_ = false;
             }
             if (screen_ == screenBefore) {
