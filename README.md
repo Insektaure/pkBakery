@@ -66,18 +66,33 @@ All derived stats (Stars, Calories, Level Boost, Berry Name, Sprite) are enforce
   - Applies a fresh timestamp and recalculates stats after import
   - Delete `.donut` files directly from the import file picker (X button)
 
+### Multi-Select
+- **ZR** (right trigger) toggles selection on the current slot
+- **Hold ZR + D-pad** to select a range of slots as you scroll
+- **Hold ZR + L/R** to select an entire page at once
+- **ZL** (left trigger) clears all selections
+- When editing a donut with slots selected, you are prompted to apply the edited donut to all selected slots on exit
+- Batch operations (Set Shiny, Set Random Lv3, Delete Selected) apply to all selected slots when multi-select is active
+- Selected slots are highlighted with a `*` marker and orange-tinted background
+- Selection count is shown in the header bar
+
 ### Batch Operations
-- **Set: Shiny Power** — Fill the current slot with a 5-star shiny donut (Sparkling Power: All Types Lv. 3 + Alpha Power Lv. 3)
-- **Set: Shiny Power (Random)** — Fill the current slot with a 5-star shiny donut with randomized Sparkling Power, size effects, and Catch Power flavors
-- **Set: Random Lv3** — Fill the current slot with random berries and 3 distinct random level-3 flavors
+- **Set: Shiny Power** — Fill the current slot (or all selected slots) with a 5-star shiny donut (Sparkling Power: All Types Lv. 3 + Alpha Power Lv. 3)
+- **Set: Shiny Power (Random)** — Fill the current slot (or all selected slots) with a 5-star shiny donut with randomized Sparkling Power, size effects, and Catch Power flavors
+- **Set: Random Lv3** — Fill the current slot (or all selected slots) with random berries and 3 distinct random level-3 flavors
 - **Fill All: Shiny Power** — Fill all 999 slots with 5-star shiny donuts with randomized Sparkling Power, size effects, and Catch Power flavors
 - **Fill All: Random Lv3** — Fill all 999 slots with random berries and 3 distinct random level-3 flavors each
 - **Clone Selected to All** — Copy the current donut to all 999 slots with unique timestamps
-- **Delete Selected Donut** — Clear the current slot
+- **Delete Selected Donut** — Clear the current slot (or all selected slots)
 - **Delete ALL Donuts** — Wipe all 999 slots
 - **Compress** — Remove gaps by packing non-empty donuts to the front
 - **Export Donut to File** — Export the selected donut
 - **Import Donut from File** — Import a donut from file
+
+### Controller LED Feedback
+- Controller LEDs blink during save writes and backup operations
+- Supports Joy-Con, Pro Controller, and Switch Lite built-in LED
+- Can be disabled by placing a `noled.cfg` file in the app directory
 
 ### Flavor Radar Chart
 The detail panel displays a radar chart showing the donut's flavor profile (Spicy, Fresh, Sweet, Bitter, Sour) with per-vertex scaling matching game's rendering.
@@ -98,10 +113,13 @@ The detail panel displays a radar chart showing the donut's flavor profile (Spic
 | Button | Action |
 |--------|--------|
 | D-Pad U/D | Move cursor |
-| L1 / R1 | Page up / down |
+| L / R | Page up / down |
 | A | Edit selected donut |
 | X | Delete selected donut |
 | Y | Batch operations menu |
+| ZR | Toggle multi-select on current slot |
+| ZR + D-pad/L/R | Select range while navigating |
+| ZL | Clear all selections |
 | + | Exit menu |
 | - | About |
 | B | Back to profile selector (with confirmation) |
@@ -112,7 +130,7 @@ The detail panel displays a radar chart showing the donut's flavor profile (Spic
 |--------|--------|
 | D-Pad U/D | Select field |
 | D-Pad L/R | Adjust value +/-1 |
-| L1 / R1 | Adjust value +/-10 |
+| L / R | Adjust value +/-10 |
 | A or B | Return to list |
 
 ### Batch Menu / Exit Menu
