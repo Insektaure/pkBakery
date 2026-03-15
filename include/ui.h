@@ -115,6 +115,8 @@ private:
     int listScroll_  = 0;
     int editField_   = 0;
     int batchCursor_ = 0;
+    uint8_t editBackup_[Donut9a::SIZE] = {};
+    bool editWasEmpty_ = false;
 
     // Multi-select state
     bool multiSelected_[Donut9a::MAX_COUNT] = {};

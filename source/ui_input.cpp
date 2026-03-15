@@ -249,14 +249,16 @@ void UI::handleListInput(int button, bool& running) {
 
         case SDL_CONTROLLER_BUTTON_B: { // Switch A = confirm/edit
             Donut9a d = save_.getDonut(listCursor_);
-            if (d.data && d.isEmpty()) {
+            if (!d.data) break;
+            editWasEmpty_ = d.isEmpty();
+            std::memcpy(editBackup_, d.data, Donut9a::SIZE);
+            if (editWasEmpty_) {
                 std::memcpy(d.data, DonutInfo::SHINY_TEMPLATE, Donut9a::SIZE);
                 d.applyTimestamp();
                 DonutInfo::recalcStats(d);
                 d.setFlavor(0, 0xD373B22CEF7A33C9ULL); // Sparkling Power: All Types (Lv. 3)
                 d.setFlavor(1, 0xCCFCB99681D31E8BULL); // Alpha Power (Lv. 3)
                 d.setFlavor(2, 0);
-                save_.invalidateDonutCount();
             }
             editField_ = 0;
             state_ = UIState::Edit;
@@ -335,8 +337,7 @@ void UI::handleEditInput(int button) {
             adjustFieldValue(+10);
             break;
 
-        case SDL_CONTROLLER_BUTTON_B: // Switch A = confirm
-        case SDL_CONTROLLER_BUTTON_A: { // Switch B = cancel
+        case SDL_CONTROLLER_BUTTON_B: { // Switch A = confirm
             if (multiSelectCount_ > 0) {
                 char msg[64];
                 std::snprintf(msg, sizeof(msg), "Copy this donut to %d selected slot%s?",
@@ -347,6 +348,16 @@ void UI::handleEditInput(int button) {
                 }
                 clearMultiSelect();
             }
+            save_.invalidateDonutCount();
+            state_ = UIState::List;
+            break;
+        }
+        case SDL_CONTROLLER_BUTTON_A: { // Switch B = cancel
+            Donut9a d = save_.getDonut(listCursor_);
+            if (d.data)
+                std::memcpy(d.data, editBackup_, Donut9a::SIZE);
+            clearMultiSelect();
+            save_.invalidateDonutCount();
             state_ = UIState::List;
             break;
         }
